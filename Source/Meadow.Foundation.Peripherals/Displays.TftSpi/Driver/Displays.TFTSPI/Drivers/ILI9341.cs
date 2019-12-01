@@ -1,4 +1,5 @@
 using System.Threading;
+using Meadow.Foundation.Bitmap;
 using Meadow.Hardware;
 
 namespace Meadow.Foundation.Displays.Tft
@@ -83,8 +84,10 @@ namespace Meadow.Foundation.Displays.Tft
             }
         }
 
-        //static byte ILI9341_SLPIN      = 0x10;
-        static byte ILI9341_SLPOUT = 0x11;
+		public override void DrawBitmap( int x, int y, OneBppBitmap bitmap, Color color ) => throw new System.NotImplementedException();
+
+		//static byte ILI9341_SLPIN      = 0x10;
+		static byte ILI9341_SLPOUT = 0x11;
         //static byte ILI9341_PTLON      = 0x12;
         //static byte ILI9341_NORON      = 0x13;
         //static byte ILI9341_RDMODE     = 0x0A;

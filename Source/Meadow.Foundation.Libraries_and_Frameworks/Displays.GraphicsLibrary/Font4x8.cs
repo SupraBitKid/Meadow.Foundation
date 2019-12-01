@@ -1,3 +1,5 @@
+using Meadow.Foundation.Font;
+
 namespace Meadow.Foundation.Graphics
 {
     public class Font4x8 : FontBase

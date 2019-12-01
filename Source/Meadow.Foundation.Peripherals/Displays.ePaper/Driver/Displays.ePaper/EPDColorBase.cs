@@ -1,4 +1,5 @@
 using System;
+using Meadow.Foundation.Bitmap;
 using Meadow.Hardware;
 
 namespace Meadow.Foundation.Displays.ePaper
@@ -139,7 +140,9 @@ namespace Meadow.Foundation.Displays.ePaper
             }
         }
 
-        public override void DrawPixel(int x, int y)
+		public override void DrawBitmap( int x, int y, OneBppBitmap bitmap, Color color ) => throw new NotImplementedException();
+
+		public override void DrawPixel(int x, int y)
         {
             DrawPixel(x, y, currentPen);
         }

@@ -1,3 +1,4 @@
+using Meadow.Foundation.Bitmap;
 using Meadow.Hardware;
 using System;
 using System.Threading;
@@ -102,5 +103,7 @@ namespace Meadow.Foundation.Displays.Tft
                     Write(data[i]);
             }
         }
-    }
+
+		public override void DrawBitmap( int x, int y, OneBppBitmap bitmap, Color color ) => throw new NotImplementedException();
+	}
 }

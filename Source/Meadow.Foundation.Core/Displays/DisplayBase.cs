@@ -1,4 +1,5 @@
-﻿using Meadow.Peripherals.Displays;
+﻿using Meadow.Foundation.Bitmap;
+using Meadow.Peripherals.Displays;
 
 namespace Meadow.Foundation.Displays
 {
@@ -111,5 +112,8 @@ namespace Meadow.Foundation.Displays
         /// <param name="bitmap">Bitmap to transfer</param>
         /// <param name="bitmap">Color to transfer</param>
         public abstract void DrawBitmap(int x, int y, int width, int height, byte[] bitmap, Color color);
-    }
+
+		public abstract void DrawBitmap( int x, int y, OneBppBitmap bitmap, Color color ) ;
+
+	}
 }

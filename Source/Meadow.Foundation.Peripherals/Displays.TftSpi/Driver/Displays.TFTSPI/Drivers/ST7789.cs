@@ -1,3 +1,4 @@
+using Meadow.Foundation.Bitmap;
 using Meadow.Hardware;
 using System;
 using System.Threading;
@@ -117,7 +118,9 @@ namespace Meadow.Foundation.Displays.Tft
             }
         }
 
-        static byte XSTART = 0;
+		public override void DrawBitmap( int x, int y, OneBppBitmap bitmap, Color color ) => throw new NotImplementedException();
+
+		static byte XSTART = 0;
         static byte YSTART = 0;
         //static byte DELAY       = 0x80;    // special signifier for command lists
         //static byte NOP         = 0x00;

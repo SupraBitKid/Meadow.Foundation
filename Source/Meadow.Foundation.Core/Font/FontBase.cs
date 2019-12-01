@@ -1,5 +1,4 @@
-﻿namespace Meadow.Foundation.Graphics
-{
+﻿namespace Meadow.Foundation.Font {
     /// <summary>
     ///     Abstract class for a Font.
     /// </summary>

@@ -1,3 +1,4 @@
+using Meadow.Foundation.Bitmap;
 using Meadow.Hardware;
 using System.Threading;
 
@@ -343,5 +344,7 @@ namespace Meadow.Foundation.Displays.Tft
 
             SendCommand(LcdCommand.RAMWR);  // write to RAM
         }
-    }
+
+		public override void DrawBitmap( int x, int y, OneBppBitmap bitmap, Color color ) => throw new System.NotImplementedException();
+	}
 }

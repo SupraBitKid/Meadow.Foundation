@@ -1,3 +1,4 @@
+using Meadow.Foundation.Bitmap;
 using Meadow.Hardware;
 using System.Threading;
 
@@ -88,17 +89,19 @@ namespace Meadow.Foundation.Displays.Tft
             SendCommand((byte)y1);
         }
 
-        // Timing Delays
-        //static int DELAYS_HWFILL = 3;
-        //static int DELAYS_HWLINE = 1;
+		public override void DrawBitmap( int x, int y, OneBppBitmap bitmap, Color color ) => throw new System.NotImplementedException();
 
-        // SSD1331 Commands
-        //static byte CMD_DRAWLINE        = 0x21;
-        //static byte CMD_DRAWRECT 		= 0x22;
-        //static byte CMD_FILL 			= 0x26;
-        //static byte CMD_SETCOLUMN 		= 0x15;
-        //static byte CMD_SETROW    		= 0x75;
-        static byte CMD_CONTRASTA = 0x81;
+		// Timing Delays
+		//static int DELAYS_HWFILL = 3;
+		//static int DELAYS_HWLINE = 1;
+
+		// SSD1331 Commands
+		//static byte CMD_DRAWLINE        = 0x21;
+		//static byte CMD_DRAWRECT 		= 0x22;
+		//static byte CMD_FILL 			= 0x26;
+		//static byte CMD_SETCOLUMN 		= 0x15;
+		//static byte CMD_SETROW    		= 0x75;
+		static byte CMD_CONTRASTA = 0x81;
         static byte CMD_CONTRASTB = 0x82;
         static byte CMD_CONTRASTC = 0x83;
         static byte CMD_MASTERCURRENT = 0x87;

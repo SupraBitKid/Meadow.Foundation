@@ -1,9 +1,10 @@
 using System;
+using Meadow.Foundation.Bitmap;
 using Meadow.Hardware;
 
 namespace Meadow.Foundation.Displays
 {
-    public class PCD8544 : DisplayBase
+    public class PCD8544 : DisplayBase1Bpp
     {
         public override DisplayColorMode ColorMode => DisplayColorMode.Format1bpp;
 
@@ -181,5 +182,7 @@ namespace Meadow.Foundation.Displays
             spiDisplay.WriteBytes(inverse ? new byte[] { 0x0D } : new byte[] { 0x0C });
             dataCommandPort.State = (true);
         }
-    }
+
+		public override void DrawBitmap( int x, int y, OneBppBitmap bitmap, BitmapMode bitmapMode ) => throw new NotImplementedException();
+	}
 }

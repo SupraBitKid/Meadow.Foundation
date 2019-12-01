@@ -1,4 +1,5 @@
-﻿ using Meadow;
+﻿using Meadow;
+using Meadow.Foundation.Bitmap;
 using Meadow.Hardware;
 using System;
 
@@ -153,13 +154,15 @@ namespace Meadow.Foundation.Displays.ePaper
             }
         }
 
-        /// <summary>
-        ///     Draw a single pixel 
-        /// </summary>
-        /// <param name="x">x location </param>
-        /// <param name="y">y location</param>
-        /// <param name="colored">Turn the pixel on (true) or off (false).</param>
-        public override void DrawPixel(int x, int y, bool colored)
+		public override void DrawBitmap( int x, int y, OneBppBitmap bitmap, Color color ) => throw new NotImplementedException();
+
+		/// <summary>
+		///     Draw a single pixel 
+		/// </summary>
+		/// <param name="x">x location </param>
+		/// <param name="y">y location</param>
+		/// <param name="colored">Turn the pixel on (true) or off (false).</param>
+		public override void DrawPixel(int x, int y, bool colored)
         {
             xRefreshStart = Math.Min(x, xRefreshStart);
             xRefreshEnd = Math.Max(x, xRefreshEnd);

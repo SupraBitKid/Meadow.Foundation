@@ -1,3 +1,4 @@
+using Meadow.Foundation.Bitmap;
 using Meadow.Hardware;
 using System.Threading;
 
@@ -103,7 +104,9 @@ namespace Meadow.Foundation.Displays.Tft
             SendCommand(invert ? CMD_INVERTDISPLAY : CMD_NORMALDISPLAY);
         }
 
-        static byte CMD_SETCOLUMN      = 0x15; ///< See datasheet
+		public override void DrawBitmap( int x, int y, OneBppBitmap bitmap, Color color ) => throw new System.NotImplementedException();
+
+		static byte CMD_SETCOLUMN      = 0x15; ///< See datasheet
         static byte CMD_SETROW         = 0x75; ///< See datasheet
         static byte CMD_WRITERAM       = 0x5C; ///< See datasheet
         //static byte CMD_READRAM        = 0x5D; ///< Not currently used

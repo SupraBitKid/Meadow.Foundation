@@ -1,4 +1,5 @@
-﻿using Meadow.Hardware;
+﻿using Meadow.Foundation.Bitmap;
+using Meadow.Hardware;
 using System.Threading;
 
 namespace Meadow.Foundation.Displays.Tft
@@ -170,5 +171,7 @@ namespace Meadow.Foundation.Displays.Tft
             dataCommandPort.State = (Command);
             Write((byte)LcdCommand.RAMWR);  // write to RAM */
         }
-    }
+
+		public override void DrawBitmap( int x, int y, OneBppBitmap bitmap, Color color ) => throw new System.NotImplementedException();
+	}
 }

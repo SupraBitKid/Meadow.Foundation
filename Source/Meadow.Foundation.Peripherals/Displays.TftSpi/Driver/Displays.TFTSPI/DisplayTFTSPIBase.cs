@@ -53,7 +53,7 @@ namespace Meadow.Foundation.Displays.Tft
         {
         }
 
-        public DisplayTftSpiBase(IIODevice device, ISpiBus spiBus, IPin chipSelectPin, IPin dcPin, IPin resetPin,
+		protected DisplayTftSpiBase(IIODevice device, ISpiBus spiBus, IPin chipSelectPin, IPin dcPin, IPin resetPin,
             uint width, uint height)
         {
             this.width = width;

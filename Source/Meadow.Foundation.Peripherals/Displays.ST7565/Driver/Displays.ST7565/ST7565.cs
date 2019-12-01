@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Meadow.Foundation.Bitmap;
 using Meadow.Hardware;
 
 namespace Meadow.Foundation.Displays
@@ -7,7 +8,7 @@ namespace Meadow.Foundation.Displays
     /// <summary>
     ///     Provide an interface to the ST7565 family of displays.
     /// </summary>
-    public class ST7565 : DisplayBase
+    public class ST7565 : DisplayBase1Bpp
     {
         #region Enums
 
@@ -410,6 +411,8 @@ namespace Meadow.Foundation.Displays
             SendCommand(0x2e);
         }
 
-        #endregion Methods
-    }
+		public override void DrawBitmap( int x, int y, OneBppBitmap bitmap, BitmapMode bitmapMode ) => throw new NotImplementedException();
+
+		#endregion Methods
+	}
 }
