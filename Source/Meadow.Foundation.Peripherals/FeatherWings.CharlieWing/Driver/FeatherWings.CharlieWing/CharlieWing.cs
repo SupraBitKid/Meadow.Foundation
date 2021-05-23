@@ -1,7 +1,7 @@
-﻿using ICs.IOExpanders;
+﻿using System;
 using Meadow.Foundation.Displays;
+using Meadow.Foundation.ICs.IOExpanders;
 using Meadow.Hardware;
-using System;
 
 namespace Meadow.Foundation.FeatherWings
 {
@@ -11,6 +11,7 @@ namespace Meadow.Foundation.FeatherWings
     public class CharlieWing : DisplayBase
     {
         Color pen;
+
         public enum I2cAddress : byte
         {
             Adddress0x74 = 0x74,
@@ -19,21 +20,21 @@ namespace Meadow.Foundation.FeatherWings
         
         public override DisplayColorMode ColorMode => DisplayColorMode.Format1bpp;
 
-        public override uint Width => 15;
+        public override int Width => 15;
 
-        public override uint Height => 7;
+        public override int Height => 7;
 
         public byte Frame { get; set; }
 
         public byte Brightness { get; set; }
 
-        protected readonly IS31FL3731 iS31FL3731;
+        protected readonly Is31fl3731 iS31FL3731;
 
         public CharlieWing(II2cBus i2cBus, I2cAddress address = I2cAddress.Adddress0x74)
         {
             Brightness = 255;
             pen = Color.White;
-            iS31FL3731 = new IS31FL3731(i2cBus, (byte)address);
+            iS31FL3731 = new Is31fl3731(i2cBus, (byte)address);
             iS31FL3731.Initialize();
 
             for (byte i = 0; i <= 7; i++)
@@ -48,19 +49,11 @@ namespace Meadow.Foundation.FeatherWings
             iS31FL3731.Clear(Frame);
         }
 
-        public void DrawBitmap(int x, int y, int width, int height, byte[] bitmap, BitmapMode bitmapMode)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void DrawBitmap(int x, int y, int width, int height, byte[] bitmap, Color color)
-        {
-            throw new NotImplementedException();
-        }
-
         public override void DrawPixel(int x, int y, Color color)
         {
-            DrawPixel(x, y, color, Brightness);
+            byte brightness = (byte)(color.Brightness * 255.0);
+
+            DrawPixel(x, y, color, brightness);
         }
 
         public virtual void DrawPixel(int x, int y, Color color, byte brightness)
@@ -92,10 +85,14 @@ namespace Meadow.Foundation.FeatherWings
 
         public override void DrawPixel(int x, int y, bool colored)
         {
-            if(colored)
+            if (colored)
+            {
                 DrawPixel(x, y, pen);
+            }
             else
+            {
                 DrawPixel(x, y, Color.Black);
+            }
         }
 
         public override void DrawPixel(int x, int y)
@@ -106,6 +103,11 @@ namespace Meadow.Foundation.FeatherWings
         public virtual void DrawPixel(int x, int y, byte brightness)
         {
             DrawPixel(x, y, pen, brightness);
+        }
+
+        public override void InvertPixel(int x, int y)
+        {
+            throw new NotImplementedException();
         }
 
         public override void SetPenColor(Color pen)

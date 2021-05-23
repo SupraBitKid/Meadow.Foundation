@@ -2,8 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Meadow.Hardware;
-using Meadow.Peripherals.Sensors.Atmospheric;
-using Meadow.Peripherals.Sensors.Temperature;
+using Meadow.Peripherals.Sensors;
 
 namespace Meadow.Foundation.Sensors.Temperature
 {
@@ -11,11 +10,9 @@ namespace Meadow.Foundation.Sensors.Temperature
     /// TMP102 Temperature sensor object.
     /// </summary>    
     public class Tmp102 :
-        FilterableObservableBase<AtmosphericConditionChangeResult, AtmosphericConditions>,
-        IAtmosphericSensor, ITemperatureSensor
+        FilterableChangeObservableBase<Units.Temperature>,
+        ITemperatureSensor
     {
-        #region Enums
-
         /// <summary>
         ///     Indicate the resolution of the sensor.
         /// </summary>
@@ -32,18 +29,10 @@ namespace Meadow.Foundation.Sensors.Temperature
             Resolution13Bits
         }
 
-        #endregion Enums
-
-        #region Member variables / fields
-
         /// <summary>
         ///     TMP102 sensor.
         /// </summary>
         private readonly II2cPeripheral tmp102;
-
-        #endregion Member variables / fields
-
-        #region Properties
 
         /// <summary>
         ///     Backing variable for the SensorResolution property.
@@ -53,18 +42,13 @@ namespace Meadow.Foundation.Sensors.Temperature
         /// <summary>
         ///     Get / set the resolution of the sensor.
         /// </summary>
-        public Resolution SensorResolution
-        {
+        public Resolution SensorResolution {
             get { return _sensorResolution; }
-            set
-            {
+            set {
                 var configuration = tmp102.ReadRegisters(0x01, 2);
-                if (value == Resolution.Resolution12Bits)
-                {
+                if (value == Resolution.Resolution12Bits) {
                     configuration[1] &= 0xef;
-                }
-                else
-                {
+                } else {
                     configuration[1] |= 0x10;
                 }
                 tmp102.WriteRegisters(0x01, configuration);
@@ -75,12 +59,7 @@ namespace Meadow.Foundation.Sensors.Temperature
         /// <summary>
         /// The temperature, in degrees celsius (°C), from the last reading.
         /// </summary>
-        public float Temperature => Conditions.Temperature.Value;
-
-        /// <summary>
-        /// The AtmosphericConditions from the last reading.
-        /// </summary>
-        public AtmosphericConditions Conditions { get; protected set; } = new AtmosphericConditions();
+        public Units.Temperature? Temperature { get; protected set; }
 
         // internal thread lock
         private object _lock = new object();
@@ -93,22 +72,7 @@ namespace Meadow.Foundation.Sensors.Temperature
         /// <value><c>true</c> if sampling; otherwise, <c>false</c>.</value>
         public bool IsSampling { get; protected set; } = false;
 
-        #endregion Properties
-
-        #region Events and delegates
-
-        public event EventHandler<AtmosphericConditionChangeResult> Updated;
-
-        #endregion Events and delegates
-
-        #region Constructors
-
-        /// <summary>
-        ///     Default constructor (private to prevent it being called).
-        /// </summary>
-        private Tmp102()
-        {
-        }
+        public event EventHandler<IChangeResult<Units.Temperature>> TemperatureUpdated = delegate { };
 
         /// <summary>
         ///     Create a new TMP102 object using the default configuration for the sensor.
@@ -124,26 +88,24 @@ namespace Meadow.Foundation.Sensors.Temperature
                                  Resolution.Resolution13Bits : Resolution.Resolution12Bits;
         }
 
-        #endregion Constructors
-
-        #region Methods
-
         /// <summary>
         /// Convenience method to get the current sensor readings. For frequent reads, use
         /// StartSampling() and StopSampling() in conjunction with the SampleBuffer.
         /// </summary>
-        public async Task<AtmosphericConditions> Read()
+        // TODO: Make this async?
+        public Units.Temperature Read()
         {
-            Conditions = await Read();
-
-            return Conditions;
+            Update();
+            return Temperature.Value;
         }
 
+        /// <summary>
+		/// Begin reading temperature data
+		/// </summary>
         public void StartUpdating(int standbyDuration = 1000)
         {
             // thread safety
-            lock (_lock)
-            {
+            lock (_lock) {
                 if (IsSampling) return;
 
                 // state muh-cheen
@@ -152,25 +114,24 @@ namespace Meadow.Foundation.Sensors.Temperature
                 SamplingTokenSource = new CancellationTokenSource();
                 CancellationToken ct = SamplingTokenSource.Token;
 
-                AtmosphericConditions oldConditions;
-                AtmosphericConditionChangeResult result;
-                Task.Factory.StartNew(async () => {
-                    while (true)
-                    {
-                        if (ct.IsCancellationRequested)
-                        {
+                Units.Temperature? oldTemperature;
+                ChangeResult<Units.Temperature> result;
+                Task.Factory.StartNew(async () => 
+                {
+                    while (true) {
+                        if (ct.IsCancellationRequested) {
                             // do task clean up here
-                            _observers.ForEach(x => x.OnCompleted());
+                            observers.ForEach(x => x.OnCompleted());
                             break;
                         }
                         // capture history
-                        oldConditions = AtmosphericConditions.From(Conditions);
+                        oldTemperature = Temperature;
 
                         // read
                         Update(); //syncrhnous for this driver 
 
                         // build a new result with the old and new conditions
-                        result = new AtmosphericConditionChangeResult(oldConditions, Conditions);
+                        result = new ChangeResult<Units.Temperature>(Temperature.Value, oldTemperature);
 
                         // let everyone know
                         RaiseChangedAndNotify(result);
@@ -182,47 +143,42 @@ namespace Meadow.Foundation.Sensors.Temperature
             }
         }
 
-        protected void RaiseChangedAndNotify(AtmosphericConditionChangeResult changeResult)
-        {
-            Updated?.Invoke(this, changeResult);
-            base.NotifyObservers(changeResult);
-        }
-
         /// <summary>
         /// Stops sampling the temperature.
         /// </summary>
         public void StopUpdating()
         {
-            lock (_lock)
+            lock (_lock) 
             {
-                if (!IsSampling) return;
+                if (!IsSampling) { return; }
 
                 SamplingTokenSource?.Cancel();
 
-                // state muh-cheen
                 IsSampling = false;
             }
         }
 
         /// <summary>
-        ///     Update the Temperature property.
+        /// Update the Temperature property.
         /// </summary>
         public void Update()
         {
             var temperatureData = tmp102.ReadRegisters(0x00, 2);
 
             var sensorReading = 0;
-            if (SensorResolution == Resolution.Resolution12Bits)
-            {
+            if (SensorResolution == Resolution.Resolution12Bits) {
                 sensorReading = (temperatureData[0] << 4) | (temperatureData[1] >> 4);
-            }
-            else
-            {
+            } else {
                 sensorReading = (temperatureData[0] << 5) | (temperatureData[1] >> 3);
             }
-            Conditions.Temperature = (float) (sensorReading * 0.0625);
+
+            Temperature = new Units.Temperature((float)(sensorReading * 0.0625), Units.Temperature.UnitType.Celsius);            
         }
 
-        #endregion Methods
+        protected void RaiseChangedAndNotify(IChangeResult<Units.Temperature> changeResult)
+        {
+            TemperatureUpdated?.Invoke(this, changeResult);
+            base.NotifyObservers(changeResult);
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using Meadow.Hardware;
+using Meadow.Units;
 
 namespace Meadow.Foundation.Sensors.Light
 {
@@ -15,9 +16,6 @@ namespace Meadow.Foundation.Sensors.Light
 
         private static II2cPeripheral i2cPeripheral;
 
-
-        private Max44009() { }
-
         public Max44009(II2cBus i2cBus, byte address = 0x4a)
         {
             i2cPeripheral = new I2cPeripheral(i2cBus, address);
@@ -25,7 +23,7 @@ namespace Meadow.Foundation.Sensors.Light
             i2cPeripheral.WriteRegister(0x02, 0x00);
         }
 
-        public double GetIlluminance()
+        public Illuminance GetIlluminance()
         {
             var data = i2cPeripheral.ReadRegisters(0x03, 2);
 
@@ -34,7 +32,7 @@ namespace Meadow.Foundation.Sensors.Light
 
             var luminance = Math.Pow(2, exponent) * mantissa * 0.045;
 
-            return luminance;
+            return new Illuminance(luminance, Illuminance.UnitType.Lux);
         }
     }
 }

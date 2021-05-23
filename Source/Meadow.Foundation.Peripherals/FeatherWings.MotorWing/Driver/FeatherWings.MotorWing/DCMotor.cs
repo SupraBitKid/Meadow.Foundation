@@ -1,6 +1,6 @@
 ﻿using Meadow.Foundation.ICs;
+using Meadow.Foundation.ICs.IOExpanders;
 using System;
-
 
 namespace Meadow.Foundation.FeatherWings
 {
@@ -16,7 +16,6 @@ namespace Meadow.Foundation.FeatherWings
         readonly byte _pwmPin;
         readonly byte _in1;
         readonly byte _in2;
-
 
         public DCMotor(short num, Pca9685 pca9685) : base(pca9685)
         {

@@ -2,21 +2,23 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Meadow.Hardware;
-using Meadow.Peripherals.Sensors.Atmospheric;
-using Meadow.Peripherals.Sensors.Temperature;
+using Meadow.Peripherals.Sensors;
+using Meadow.Units;
 
 namespace Meadow.Foundation.Sensors.Atmospheric
 {
-    /// <summary>
-    /// Bosch BMP085 digital pressure and temperature sensor.
-    /// </summary>
-    public class Bmp180 : FilterableObservableBase<AtmosphericConditionChangeResult, AtmosphericConditions>,
-        IAtmosphericSensor, IBarometricPressureSensor, ITemperatureSensor
+    public class Bmp180 :
+        FilterableChangeObservableBase<(Units.Temperature?, Pressure?)>,
+        ITemperatureSensor, IBarometricPressureSensor
     {
-        #region Member variables / fields
+        //==== events
+        public event EventHandler<IChangeResult<(Units.Temperature?, Pressure?)>> Updated = delegate { };
+        public event EventHandler<IChangeResult<Units.Temperature>> TemperatureUpdated = delegate { };
+        public event EventHandler<IChangeResult<Pressure>> PressureUpdated = delegate { };
 
+        //==== internals
         /// <summary>
-        ///     SH31D sensor communicates using I2C.
+        ///     BMP180 sensor communicates using I2C.
         /// </summary>
         private readonly II2cPeripheral bmp180;
 
@@ -40,28 +42,22 @@ namespace Meadow.Foundation.Sensors.Atmospheric
         private short _mc;
         private short _md;
 
-        #endregion Member variables / fields
-
-        #region Properties
-
-        /// <summary>
-        /// Pressure
-        /// </summary>
-        public float Pressure => Conditions.Pressure.Value;
-
-        /// <summary>
-        /// The temperature, in degrees celsius (°C), from the last reading.
-        /// </summary>
-        public float Temperature => Conditions.Temperature.Value;
-
-        /// <summary>
-        /// The AtmosphericConditions from the last reading.
-        /// </summary>
-        public AtmosphericConditions Conditions { get; protected set; } = new AtmosphericConditions();
-
         // internal thread lock
         private object _lock = new object();
         private CancellationTokenSource SamplingTokenSource;
+
+        //==== properties
+        /// <summary>
+        /// Last value read from the Pressure sensor.
+        /// </summary>
+        public Units.Temperature? Temperature => Conditions.Temperature;
+
+        /// <summary>
+        /// Last value read from the Pressure sensor.
+        /// </summary>
+        public Pressure? Pressure => Conditions.Pressure;
+
+        public (Units.Temperature? Temperature, Pressure? Pressure) Conditions;
 
         /// <summary>
         /// Gets a value indicating whether the analog input port is currently
@@ -72,10 +68,6 @@ namespace Meadow.Foundation.Sensors.Atmospheric
 
         public static int DEFAULT_SPEED => 40000; // BMP085 clock rate
 
-        #endregion Properties
-
-        #region Enums
-
         public enum DeviceMode
         {
             UltraLowPower = 0,
@@ -83,17 +75,6 @@ namespace Meadow.Foundation.Sensors.Atmospheric
             HighResolution = 2,
             UltraHighResolution = 3
         }
-
-        #endregion Enums
-
-        #region Events and delegates
-
-        public event EventHandler<AtmosphericConditionChangeResult> Updated;
-
-        #endregion Events and delegates
-
-        #region Constructors
-
         /// <summary>
         /// Provide a mechanism for reading the temperature and humidity from
         /// a Bmp085 temperature / humidity sensor.
@@ -111,15 +92,11 @@ namespace Meadow.Foundation.Sensors.Atmospheric
             Update();
         }
 
-        #endregion Constructors
-
-        #region Methods
-
         /// <summary>
         /// Convenience method to get the current sensor readings. For frequent reads, use
         /// StartSampling() and StopSampling() in conjunction with the SampleBuffer.
         /// </summary>
-        public Task<AtmosphericConditions> Read()
+        public Task<(Units.Temperature? Temperature, Pressure? Pressure)> Read()
         {
             Update();
 
@@ -139,25 +116,26 @@ namespace Meadow.Foundation.Sensors.Atmospheric
                 SamplingTokenSource = new CancellationTokenSource();
                 CancellationToken ct = SamplingTokenSource.Token;
 
-                AtmosphericConditions oldConditions;
-                AtmosphericConditionChangeResult result;
+                (Units.Temperature?, Pressure?) oldConditions;
+                ChangeResult<(Units.Temperature?, Pressure?)> result;
+
                 Task.Factory.StartNew(async () => {
                     while (true)
                     {
                         if (ct.IsCancellationRequested)
                         {
                             // do task clean up here
-                            _observers.ForEach(x => x.OnCompleted());
+                            observers.ForEach(x => x.OnCompleted());
                             break;
                         }
-                        // capture history
-                        oldConditions = AtmosphericConditions.From(Conditions);
+
+                        oldConditions = (Conditions.Temperature, Conditions.Pressure);
 
                         // read
                         Update();
 
                         // build a new result with the old and new conditions
-                        result = new AtmosphericConditionChangeResult(oldConditions, Conditions);
+                        result = new ChangeResult<(Units.Temperature?, Pressure?)>(Conditions, oldConditions);
 
                         // let everyone know
                         RaiseChangedAndNotify(result);
@@ -169,9 +147,15 @@ namespace Meadow.Foundation.Sensors.Atmospheric
             }
         }
 
-        protected void RaiseChangedAndNotify(AtmosphericConditionChangeResult changeResult)
+        protected void RaiseChangedAndNotify(IChangeResult<(Units.Temperature? Temperature, Pressure? Pressure)> changeResult)
         {
             Updated?.Invoke(this, changeResult);
+            if (changeResult.New.Temperature is { } temp) {
+                TemperatureUpdated?.Invoke(this, new ChangeResult<Units.Temperature>(temp, changeResult.Old?.Temperature));
+            }
+            if (changeResult.New.Pressure is { } pressure) {
+                PressureUpdated?.Invoke(this, new ChangeResult<Units.Pressure>(pressure, changeResult.Old?.Pressure));
+            }
             base.NotifyObservers(changeResult);
         }
 
@@ -182,7 +166,7 @@ namespace Meadow.Foundation.Sensors.Atmospheric
         {
             lock (_lock)
             {
-                if (!IsSampling) return;
+                if (!IsSampling) { return; }
 
                 SamplingTokenSource?.Cancel();
 
@@ -207,7 +191,7 @@ namespace Meadow.Foundation.Sensors.Atmospheric
             x2 = (_mc << 11) / (x1 + _md);
             b5 = x1 + x2;
 
-            Conditions.Temperature = (float)((b5 + 8) >> 4) / 10;
+            Conditions.Temperature = new Units.Temperature((float)((b5 + 8) >> 4) / 10, Units.Temperature.UnitType.Celsius);
 
             // calculate the compensated pressure
             b6 = b5 - 4000;
@@ -242,7 +226,9 @@ namespace Meadow.Foundation.Sensors.Atmospheric
             x1 = (x1 * 3038) >> 16;
             x2 = (-7357 * p) >> 16;
 
-            Conditions.Pressure = (int)(p + ((x1 + x2 + 3791) >> 4));
+            int value = (int)(p + ((x1 + x2 + 3791) >> 4));
+
+            Conditions.Pressure = new Pressure(value, Units.Pressure.UnitType.Pascal);
         }
 
         private long ReadUncompensatedTemperature()
@@ -305,12 +291,33 @@ namespace Meadow.Foundation.Sensors.Atmospheric
             return (short)((data[0] << 8) | data[1]);
         }
 
-
-
         public void Dispose()
         {
         }
 
-        #endregion Methods
+        /// <summary>
+        /// Creates a `FilterableChangeObserver` that has a handler and a filter.
+        /// </summary>
+        /// <param name="handler">The action that is invoked when the filter is satisifed.</param>
+        /// <param name="filter">An optional filter that determines whether or not the
+        /// consumer should be notified.</param>
+        /// <returns></returns>
+        /// <returns></returns>
+        // Implementor Notes:
+        //  This is a convenience method that provides named tuple elements. It's not strictly
+        //  necessary, as the `FilterableChangeObservableBase` class provides a default implementation,
+        //  but if you use it, then the parameters are named `Item1`, `Item2`, etc. instead of
+        //  `Temperature`, `Pressure`, etc.
+        public static new
+            FilterableChangeObserver<(Units.Temperature?, Pressure?)>
+            CreateObserver(
+                Action<IChangeResult<(Units.Temperature? Temperature, Pressure? Pressure)>> handler,
+                Predicate<IChangeResult<(Units.Temperature? Temperature, Pressure? Pressure)>>? filter = null
+            )
+        {
+            return new FilterableChangeObserver<(Units.Temperature?, Pressure?)>(
+                handler: handler, filter: filter
+                );
+        }
     }
 }

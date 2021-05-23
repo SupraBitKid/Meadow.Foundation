@@ -15,7 +15,7 @@ namespace Sensors.HallEffect_Sample
             Console.Write("Initializing...");
 
             hallSensor = new LinearHallEffectTachometer(
-                inputPort: Device.CreateDigitalInputPort(Device.Pins.D02, Meadow.Hardware.InterruptMode.EdgeRising, Meadow.Hardware.ResistorMode.PullUp, 0, 10),
+                inputPort: Device.CreateDigitalInputPort(Device.Pins.D02, Meadow.Hardware.InterruptMode.EdgeRising, Meadow.Hardware.ResistorMode.InternalPullUp, 0, 10),
                 type: CircuitTerminationType.CommonGround,
                 numberOfMagnets: 2,
                 rpmChangeNotificationThreshold: 1);
@@ -24,7 +24,7 @@ namespace Sensors.HallEffect_Sample
             Console.WriteLine("done");
         }
 
-        void HallSensorRPMsChanged(object sender, FloatChangeResult e)
+        void HallSensorRPMsChanged(object sender, ChangeResult<float> e)
         {
             Console.WriteLine($"RPM: {e.New}");
         }

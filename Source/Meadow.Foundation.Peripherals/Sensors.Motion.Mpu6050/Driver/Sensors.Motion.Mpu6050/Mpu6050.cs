@@ -1,13 +1,19 @@
 ﻿using Meadow.Hardware;
 using Meadow.Peripherals.Sensors.Motion;
+using Meadow.Units;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Meadow.Foundation.Sensors.Motion
 {
-    public class Mpu6050 : FilterableObservableBase<AccelerationConditionChangeResult, AccelerationConditions>,
-        IAccelerometer, IDisposable
+    // TODO:
+    //  * no one-off `Read()` method.
+    //  * needs to inherit from `FilterableChangeObservableI2CPeripheral`, currently using a bunch of allocating methods.
+
+    public class Mpu6050 :
+        FilterableChangeObservableBase<(Acceleration3D?, AngularAcceleration3D?)>,
+        IAccelerometer, IAngularAccelerometer, IDisposable
     {
         /// <summary>
         ///     Valid addresses for the sensor.
@@ -37,8 +43,11 @@ namespace Meadow.Foundation.Sensors.Motion
             GyroZ = 0x47
         }
 
-        public event EventHandler<AccelerationConditionChangeResult> Updated;
+        public event EventHandler<IChangeResult<(Acceleration3D? Acceleration3D, AngularAcceleration3D? AngularAcceleration3D)>> Updated;
+        public event EventHandler<IChangeResult<Acceleration3D>> Acceleration3DUpdated;
+        public event EventHandler<IChangeResult<AngularAcceleration3D>> AngularAcceleration3DUpdated;
 
+        /*
         /// <summary>
         ///     Acceleration along the X-axis.
         /// </summary>
@@ -46,12 +55,9 @@ namespace Meadow.Foundation.Sensors.Motion
         ///     This property will only contain valid data after a call to Read or after
         ///     an interrupt has been generated.
         /// </remarks>
-        public float AccelerationX
-        {
-            get
-            {
-                if (IsSampling) { return Conditions.XAcceleration.Value; }
-                else { return ReadRegisterInt16(Register.AccelerometerX) * (1 << AccelerometerScale) / AccelScaleBase; }
+        public float AccelerationX {
+            get {
+                if (IsSampling) { return Conditions.XAcceleration.Value; } else { return ReadRegisterInt16(Register.AccelerometerX) * (1 << AccelerometerScale) / AccelScaleBase; }
             }
         }
 
@@ -62,12 +68,9 @@ namespace Meadow.Foundation.Sensors.Motion
         ///     This property will only contain valid data after a call to Read or after
         ///     an interrupt has been generated.
         /// </remarks>
-        public float AccelerationY
-        {
-            get
-            {
-                if (IsSampling) { return Conditions.YAcceleration.Value; }
-                else { return ReadRegisterInt16(Register.AccelerometerY) * (1 << AccelerometerScale) / AccelScaleBase; }
+        public float AccelerationY {
+            get {
+                if (IsSampling) { return Conditions.YAcceleration.Value; } else { return ReadRegisterInt16(Register.AccelerometerY) * (1 << AccelerometerScale) / AccelScaleBase; }
             }
         }
 
@@ -78,16 +81,16 @@ namespace Meadow.Foundation.Sensors.Motion
         ///     This property will only contain valid data after a call to Read or after
         ///     an interrupt has been generated.
         /// </remarks>
-        public float AccelerationZ
-        {
-            get
-            {
-                if (IsSampling) { return Conditions.ZAcceleration.Value; }
-                else { return ReadRegisterInt16(Register.AccelerometerZ) * (1 << AccelerometerScale) / AccelScaleBase; }
+        public float AccelerationZ {
+            get {
+                if (IsSampling) { return Conditions.ZAcceleration.Value; } else { return ReadRegisterInt16(Register.AccelerometerZ) * (1 << AccelerometerScale) / AccelScaleBase; }
             }
-        }
+        }*/
 
-        public AccelerationConditions Conditions { get; protected set; } = new AccelerationConditions();
+        public (Acceleration3D? Acceleration3d, AngularAcceleration3D? AngularAcceleration3d) Conditions;
+
+        public Acceleration3D? Acceleration3D { get; protected set; }
+        public AngularAcceleration3D? AngularAcceleration3D { get; protected set; }
 
         /// <summary>
         /// Gets a value indicating whether the analog input port is currently
@@ -102,17 +105,17 @@ namespace Meadow.Foundation.Sensors.Motion
         // internal thread lock
         private object _lock = new object();
         private CancellationTokenSource SamplingTokenSource;
-
-        private float _temp;
- 
-        private float? _lastTemp;
+               
+        Units.Temperature _temperature;
 
         private int GyroScale { get; set; }
         private int AccelerometerScale { get; set; }
         private II2cBus Device { get; set; }
 
-        public float GyroChangeThreshold { get; set; }
-        public float AccelerationChangeThreshold { get; set; }
+        // [Bryan 2021.05.16] removed: this is an old pattern, and the filterable
+        // observerable handles it. also, these settings weren't used anywhere.
+        //public float GyroChangeThreshold { get; set; }
+        //public float AccelerationChangeThreshold { get; set; }
         public byte Address { get; private set; }
 
         public Mpu6050(II2cBus bus, byte address = 0x68)
@@ -131,8 +134,7 @@ namespace Meadow.Foundation.Sensors.Motion
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
-            {
+            if (disposing) {
                 StopUpdating();
             }
         }
@@ -154,8 +156,7 @@ namespace Meadow.Foundation.Sensors.Motion
         public void StartUpdating(int standbyDuration = 1000)
         {
             // thread safety
-            lock (_lock)
-            {
+            lock (_lock) {
                 if (IsSampling) { return; }
 
                 // state muh-cheen
@@ -164,25 +165,23 @@ namespace Meadow.Foundation.Sensors.Motion
                 SamplingTokenSource = new CancellationTokenSource();
                 CancellationToken ct = SamplingTokenSource.Token;
 
-                AccelerationConditions oldConditions;
-                AccelerationConditionChangeResult result;
+                (Acceleration3D?, AngularAcceleration3D?) oldConditions;
+                ChangeResult<(Acceleration3D?, AngularAcceleration3D?)> result;
                 Task.Factory.StartNew(async () => {
-                    while (true)
-                    {
-                        if (ct.IsCancellationRequested)
-                        {
+                    while (true) {
+                        if (ct.IsCancellationRequested) {
                             // do task clean up here
-                            _observers.ForEach(x => x.OnCompleted());
+                            observers.ForEach(x => x.OnCompleted());
                             break;
                         }
                         // capture history
-                        oldConditions = AccelerationConditions.From(Conditions);
+                        oldConditions = (Conditions.Acceleration3d, Conditions.AngularAcceleration3d);
 
                         // read
                         Update();
 
                         // build a new result with the old and new conditions
-                        result = new AccelerationConditionChangeResult(oldConditions, Conditions);
+                        result = new ChangeResult<(Acceleration3D?, AngularAcceleration3D?)>(oldConditions, Conditions);
 
                         // let everyone know
                         RaiseChangedAndNotify(result);
@@ -194,9 +193,15 @@ namespace Meadow.Foundation.Sensors.Motion
             }
         }
 
-        protected void RaiseChangedAndNotify(AccelerationConditionChangeResult changeResult)
+        protected void RaiseChangedAndNotify(IChangeResult<(Acceleration3D? Acceleration3D, AngularAcceleration3D? AngularAcceleration3D)> changeResult)
         {
             Updated?.Invoke(this, changeResult);
+            if (changeResult.New.AngularAcceleration3D is { } angular) {
+                AngularAcceleration3DUpdated?.Invoke(this, new ChangeResult<Units.AngularAcceleration3D>(angular, changeResult.Old?.AngularAcceleration3D));
+            }
+            if (changeResult.New.Acceleration3D is { } accel) {
+                Acceleration3DUpdated?.Invoke(this, new ChangeResult<Units.Acceleration3D>(accel, changeResult.Old?.Acceleration3D));
+            }
             base.NotifyObservers(changeResult);
         }
 
@@ -205,8 +210,7 @@ namespace Meadow.Foundation.Sensors.Motion
         ///// </summary>
         public void StopUpdating()
         {
-            lock (_lock)
-            {
+            lock (_lock) {
                 if (!IsSampling) { return; }
 
                 SamplingTokenSource?.Cancel();
@@ -218,8 +222,7 @@ namespace Meadow.Foundation.Sensors.Motion
 
         private void Initialize(byte address)
         {
-            switch (address)
-            {
+            switch (address) {
                 case 0x68:
                 case 0x69:
                     // valid;
@@ -234,62 +237,15 @@ namespace Meadow.Foundation.Sensors.Motion
         }
 
         /// <summary>
-        /// Gyroscope X measurement, in degrees per second
-        /// </summary>
-        public float XGyroscopicAcceleration
-        {
-            get
-            {
-                if (IsSampling)
-                {
-                    return Conditions.XGyroscopicAcceleration.Value;
-                }
-                return ReadRegisterInt16(Register.GyroX) * (1 << GyroScale) / GyroScaleBase;
-            }
-        }
-
-        /// <summary>
-        /// Gyroscope Y measurement, in degrees per second
-        /// </summary>
-        public float YGyroscopicAcceleration
-        {
-            get
-            {
-                if (IsSampling)
-                {
-                    return Conditions.YGyroscopicAcceleration.Value;
-                }
-                return ReadRegisterInt16(Register.GyroY) * (1 << GyroScale) / GyroScaleBase;
-            }
-        }
-
-        /// <summary>
-        /// Gyroscope Z measurement, in degrees per second
-        /// </summary>
-        public float ZGyroscopicAcceleration
-        {
-            get
-            {
-                if (IsSampling)
-                {
-                    return Conditions.ZGyroscopicAcceleration.Value;
-                }
-                return ReadRegisterInt16(Register.GyroZ) * (1 << GyroScale) / GyroScaleBase;
-            }
-        }
-
-        /// <summary>
         /// Temperature of sensor
         /// </summary>
-        public float TemperatureC
-        {
-            get
-            {
-                if (IsSampling)
+        public Units.Temperature Temperature {
+            get {
+                if (IsSampling) 
                 {
-                    return _temp;
+                    return _temperature;
                 }
-                return ReadRegisterInt16(Register.Temperature) * (1 << GyroScale) / GyroScaleBase;
+                return new Units.Temperature(ReadRegisterInt16(Register.Temperature) * (1 << GyroScale) / GyroScaleBase, Units.Temperature.UnitType.Celsius);
             }
         }
 
@@ -317,39 +273,69 @@ namespace Meadow.Foundation.Sensors.Motion
         private short ReadRegisterInt16(byte register)
         {
             var data = Device.WriteReadData(Address, 2, register);
-            unchecked
-            {
+            unchecked {
                 return (short)(data[0] << 8 | data[1]); ;
             }
         }
 
         private void Update()
         {
-            lock (_lock)
+            lock (_lock) 
             {
                 // we'll just read 14 bytes (7 registers), starting at 0x3b
                 var data = Device.WriteReadData(Address, 14, (byte)Register.AccelerometerX);
 
                 var a_scale = (1 << AccelerometerScale) / AccelScaleBase;
                 var g_scale = (1 << GyroScale) / GyroScaleBase;
-                Conditions.XAcceleration = ScaleAndOffset(data, 0, a_scale);
-                Conditions.YAcceleration = ScaleAndOffset(data, 2, a_scale);
-                Conditions.ZAcceleration = ScaleAndOffset(data, 4, a_scale);
-                _temp = ScaleAndOffset(data, 6, 1 / 340f, 36.53f);
-                Conditions.XGyroscopicAcceleration = ScaleAndOffset(data, 8, g_scale);
-                Conditions.YGyroscopicAcceleration = ScaleAndOffset(data, 10, g_scale);
-                Conditions.ZGyroscopicAcceleration = ScaleAndOffset(data, 12, g_scale);
+                Acceleration3D newAccel = new Acceleration3D(
+                    new Acceleration(ScaleAndOffset(data, 0, a_scale)),
+                    new Acceleration(ScaleAndOffset(data, 2, a_scale)),
+                    new Acceleration(ScaleAndOffset(data, 4, a_scale))
+                    );
+                Conditions.Acceleration3d = newAccel;
+                _temperature = new Units.Temperature(ScaleAndOffset(data, 6, 1 / 340f, 36.53f), Units.Temperature.UnitType.Celsius);
+                AngularAcceleration3D angularAccel = new AngularAcceleration3D(
+                    new AngularAcceleration(ScaleAndOffset(data, 8, g_scale)),
+                    new AngularAcceleration(ScaleAndOffset(data, 10, g_scale)),
+                    new AngularAcceleration(ScaleAndOffset(data, 12, g_scale))
+                    );
+                Conditions.AngularAcceleration3d = angularAccel;
             }
         }
 
         private float ScaleAndOffset(Span<byte> data, int index, float scale, float offset = 0)
         {
             // convert to a signed number
-            unchecked
-            {
+            unchecked {
                 var s = (short)(data[index] << 8 | data[index + 1]);
                 return (s * scale) + offset;
             }
         }
+
+        /// <summary>
+        /// Creates a `FilterableChangeObserver` that has a handler and a filter.
+        /// </summary>
+        /// <param name="handler">The action that is invoked when the filter is satisifed.</param>
+        /// <param name="filter">An optional filter that determines whether or not the
+        /// consumer should be notified.</param>
+        /// <returns></returns>
+        /// <returns></returns>
+        // Implementor Notes:
+        //  This is a convenience method that provides named tuple elements. It's not strictly
+        //  necessary, as the `FilterableChangeObservableBase` class provides a default implementation,
+        //  but if you use it, then the parameters are named `Item1`, `Item2`, etc. instead of
+        //  `Temperature`, `Pressure`, etc.
+        public static new
+            FilterableChangeObserver<(Acceleration3D?, AngularAcceleration3D?)>
+            CreateObserver(
+                Action<IChangeResult<(Acceleration3D? Acceleration3D, AngularAcceleration3D? AngularAcceleration3D)>> handler,
+                Predicate<IChangeResult<(Acceleration3D? Acceleration3D, AngularAcceleration3D? AngularAcceleration3D)>>? filter = null
+            )
+        {
+            return new FilterableChangeObserver<(Acceleration3D?, AngularAcceleration3D?)>(
+                handler: handler, filter: filter
+                );
+        }
+
     }
 }

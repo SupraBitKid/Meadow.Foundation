@@ -5,8 +5,6 @@ namespace Meadow.Foundation.Sensors.Light
 {
     public class Bh1745
     {
-        #region Properties
-
         /// <summary>
         /// The primary I2c address of the BH1745
         /// </summary>
@@ -226,10 +224,6 @@ namespace Meadow.Foundation.Sensors.Light
         /// </summary>
         public ChannelMultipliers CompensationMultipliers { get; set; }
 
-        #endregion
-
-        #region Member variables / fields
-
         I2cPeripheral bh1745;
 
         //masks
@@ -263,10 +257,6 @@ namespace Meadow.Foundation.Sensors.Light
         private readonly byte TL = 0x64;
         private readonly byte MANUFACTURER_ID = 0x92;
 
-        #endregion Member variables / fields
-
-        #region Enums
-
         /// <summary>
         /// The available ADC gain scaling options for the Bh1745
         /// </summary>
@@ -276,7 +266,7 @@ namespace Meadow.Foundation.Sensors.Light
             X2 = 0x1,
             X16 = 0x2
         }
-
+        
         public enum InterruptType : byte
         {
             ToggleMeasurementEnd = 0x0,
@@ -315,16 +305,6 @@ namespace Meadow.Foundation.Sensors.Light
             Ms5120 = 5120
         }
 
-
-        #endregion Enums
-
-        #region Constructors
-
-        /// <summary>
-        ///     Default constructor (private to prevent it being used)
-        /// </summary>
-        private Bh1745() {}
-
         /// <summary>
         ///     Create a new BH17545 color sensor object
         /// </summary>
@@ -342,10 +322,6 @@ namespace Meadow.Foundation.Sensors.Light
 
             Reset();
         }
-
-        #endregion Constructors
-
-        #region Methods
 
         /// <summary>
         /// Resets the device to the default configuration
@@ -436,10 +412,6 @@ namespace Meadow.Foundation.Sensors.Light
             return Color.FromRgb(red, green, blue);
         }
 
-        #endregion
-
-        #region Classes
-
         /// <summary>
         /// Channel compensation multipliers used to compensate the four (4) color channels of the Bh1745
         /// </summary>
@@ -462,7 +434,5 @@ namespace Meadow.Foundation.Sensors.Light
             /// </summary>
             public double Clear { get; set; } = 1;
         }
-
-        #endregion
     }
 }

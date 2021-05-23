@@ -20,8 +20,6 @@ namespace MeadowApp
         int[,] cubeWireframe = new int[12, 3];
         int[,] cubeVertices;
 
-        int fd = 0; //0=orthographic
-
         public MeadowApp()
         {
             int cubeSize = 5;
@@ -36,7 +34,6 @@ namespace MeadowApp
                  {  cubeSize,  cubeSize, -cubeSize},
                  { -cubeSize,  cubeSize, -cubeSize},
             };
-
 
             Init();
 
@@ -154,9 +151,6 @@ namespace MeadowApp
             graphics.DrawLine(cubeWireframe[2, 0], cubeWireframe[2, 1], cubeWireframe[6, 0], cubeWireframe[6, 1], true);
             graphics.DrawLine(cubeWireframe[3, 0], cubeWireframe[3, 1], cubeWireframe[7, 0], cubeWireframe[7, 1], true);
         }
-
-
-
 
     }
 }

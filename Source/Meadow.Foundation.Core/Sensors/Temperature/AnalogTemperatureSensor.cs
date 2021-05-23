@@ -1,8 +1,8 @@
 ﻿using Meadow.Hardware;
-using Meadow.Peripherals.Sensors.Atmospheric;
-using Meadow.Peripherals.Sensors.Temperature;
+using Meadow.Peripherals.Sensors;
 using System;
 using System.Threading.Tasks;
+using Meadow.Units;
 
 namespace Meadow.Foundation.Sensors.Temperature
 {
@@ -13,7 +13,7 @@ namespace Meadow.Foundation.Sensors.Temperature
     /// </summary>
     /// <remarks>
     /// <i>AnalogTemperature</i> provides a method of reading the temperature from
-    /// linear analog temperature sensors.  There are a number of these sensors available
+    /// linear analog temperature sensors. There are a number of these sensors available
     /// including the commonly available TMP and LM series.
     /// Sensors of this type obey the following equation:
     /// y = mx + c
@@ -24,21 +24,19 @@ namespace Meadow.Foundation.Sensors.Temperature
     /// by setting the sensor type to <i>SensorType.Custom</i> and providing the settings for
     /// the linear calculations.
     /// The default sensors have the following settings:
-    /// Sensor              Millivolts at 25C    Millivolts per degree C
-    /// TMP35, LM35, LM45       250                     10
-    /// TMP36, LM50             750                     10
-    /// TMP37                   500                     20
+    /// Sensor              Millivolts at 25C    Millivolts per degree C   VoltageOffset
+    /// TMP35, LM35, LM45       250                     10                      0
+    /// TMP36, LM50             750                     10                      0.5
+    /// TMP37                   500                     20                      0
     /// </remarks>
-    public class AnalogTemperature
-        : FilterableObservableBase<AtmosphericConditionChangeResult, AtmosphericConditions>,
+    public class AnalogTemperature :
+        FilterableChangeObservableBase<Units.Temperature>,
         ITemperatureSensor
     {
         /// <summary>
         /// Raised when the value of the reading changes.
         /// </summary>
-        public event EventHandler<AtmosphericConditionChangeResult> Updated = delegate { };
-
-        #region Local classes
+        public event EventHandler<IChangeResult<Units.Temperature>> TemperatureUpdated = delegate { };
 
         /// <summary>
         ///     Calibration class for new sensor types.  This allows new sensors
@@ -79,20 +77,19 @@ namespace Meadow.Foundation.Sensors.Temperature
             /// <summary>
             ///     Create a new Calibration object using the specified values.
             /// </summary>
-            /// <param name="sampleReading">Sample reading from the data sheet.</param>
+            /// <param name="degreesCelciusSampleReading">Sample reading from the data sheet.</param>
             /// <param name="millivoltsAtSampleReading">Millivolts output at the sample reading (from the data sheet).</param>
             /// <param name="millivoltsPerDegreeCentigrade">Millivolt change per degree centigrade (from the data sheet).</param>
-            public Calibration(int sampleReading, int millivoltsAtSampleReading, int millivoltsPerDegreeCentigrade)
+            /// <param name="millivoltsOffset">Millovolts offset (from the data sheet).</param>
+            public Calibration(int degreesCelciusSampleReading,
+                               int millivoltsAtSampleReading,
+                               int millivoltsPerDegreeCentigrade)
             {
-                SampleReading = sampleReading;
+                SampleReading = degreesCelciusSampleReading;
                 MillivoltsAtSampleReading = millivoltsAtSampleReading;
                 MillivoltsPerDegreeCentigrade = millivoltsPerDegreeCentigrade;
             }
         }
-
-        #endregion Local classes
-
-        #region Enums
 
         /// <summary>
         ///     Type of temperature sensor.
@@ -108,34 +105,9 @@ namespace Meadow.Foundation.Sensors.Temperature
             LM50
         }
 
-        #endregion Enums
-
-        #region Member variables /fields
+        public Calibration SensorCalibration { get; set; }
 
         public IAnalogInputPort AnalogInputPort { get; protected set; }
-
-        /// <summary>
-        ///     Millivolts per degree centigrade for the sensor attached to the analog port.
-        /// </summary>
-        /// <remarks>
-        ///     This will be the gradient of the line y = mx + c.
-        /// </remarks>
-        private readonly int _millivoltsPerDegreeCentigrade;
-
-        /// <summary>
-        ///     Point where the line y = mx +c would intercept the y-axis.
-        /// </summary>
-        private readonly float _yIntercept;
-
-        #endregion Member variables / fields
-
-        #region Properties
-
-        /// <summary>
-        ///     Analog port that the temperature sensor is attached to.
-        /// </summary>
-        /// <value>Analog port connected to the temperature sensor.</value>
-        private IAnalogInputPort AnalogPort { get; set; }
 
         /// <summary>
         ///     Temperature in degrees centigrade.
@@ -144,21 +116,7 @@ namespace Meadow.Foundation.Sensors.Temperature
         ///     The temperature is given by the following calculation:
         ///     temperature = (reading in millivolts - yIntercept) / millivolts per degree centigrade
         /// </remarks>
-        public float Temperature { get; protected set; }
-
-        float ITemperatureSensor.Temperature => throw new NotImplementedException();
-
-        #endregion Properties
-
-
-        #region Constructor(s)
-
-        /// <summary>
-        ///     Default constructor, private to prevent this being used.
-        /// </summary>
-        private AnalogTemperature()
-        {
-        }
+        public Units.Temperature? Temperature { get; protected set; }
 
         /// <summary>
         ///     New instance of the AnalogTemperatureSensor class.
@@ -167,49 +125,55 @@ namespace Meadow.Foundation.Sensors.Temperature
         /// <param name="sensorType">Type of sensor attached to the analog port.</param>
         /// <param name="calibration">Calibration for the analog temperature sensor. Only used if sensorType is set to Custom.</param>
         public AnalogTemperature(
-            IIODevice device,
+            IAnalogInputController device,
             IPin analogPin,
             KnownSensorType sensorType,
-            Calibration calibration = null
+            Calibration? calibration = null
             ) : this(device.CreateAnalogInputPort(analogPin), sensorType, calibration)
         {
         }
 
         public AnalogTemperature(IAnalogInputPort analogInputPort,
                                  KnownSensorType sensorType,
-                                 Calibration calibration = null)
+                                 Calibration? calibration = null)
         {
             AnalogInputPort = analogInputPort;
 
-            //
-            //  If the calibration object is null use the defaults for TMP35.
-            //
-            if (calibration == null) { calibration = new Calibration(); }
-
-            switch (sensorType)
-            {
+            switch (sensorType) {
                 case KnownSensorType.TMP35:
                 case KnownSensorType.LM35:
                 case KnownSensorType.LM45:
-                    _yIntercept = 0;
-                    _millivoltsPerDegreeCentigrade = 10;
+                    calibration = new Calibration(
+                        degreesCelciusSampleReading: 25,
+                        millivoltsAtSampleReading: 250,
+                        millivoltsPerDegreeCentigrade: 10);
                     break;
                 case KnownSensorType.LM50:
                 case KnownSensorType.TMP36:
-                    _yIntercept = 500;
-                    _millivoltsPerDegreeCentigrade = 10;
+                    calibration = new Calibration(
+                        degreesCelciusSampleReading: 25,
+                        millivoltsAtSampleReading: 750,
+                        millivoltsPerDegreeCentigrade: 10);
                     break;
                 case KnownSensorType.TMP37:
-                    _yIntercept = 0;
-                    _millivoltsPerDegreeCentigrade = 20;
+                    calibration = new Calibration(
+                        degreesCelciusSampleReading: 25,
+                        millivoltsAtSampleReading: 750,
+                        millivoltsPerDegreeCentigrade: 10);
                     break;
                 case KnownSensorType.Custom:
-                    _yIntercept = calibration.MillivoltsAtSampleReading - (calibration.SampleReading * calibration.MillivoltsPerDegreeCentigrade);
-                    _millivoltsPerDegreeCentigrade = calibration.MillivoltsPerDegreeCentigrade;
+                    //user provided calibration
+                    if(calibration == null)
+                    {
+                        throw new ArgumentNullException("Custom Calibration sensor type requires a Calibration parameter");
+                    }
                     break;
                 default:
-                    throw new ArgumentException("Unknown sensor type", nameof(sensorType));
+                    calibration = new Calibration();
+                    break;
             }
+
+            SensorCalibration = calibration;
 
             // wire up our observable
             // have to convert from voltage to temp units for our consumers
@@ -217,26 +181,22 @@ namespace Meadow.Foundation.Sensors.Temperature
             // pattern through the sensor driver
             AnalogInputPort.Subscribe
             (
-                new FilterableObserver<FloatChangeResult, float>(
-                    h => {
-                        var newTemp = VoltageToTemperature(h.New);
-                        var oldTemp = VoltageToTemperature(h.Old);
+                IAnalogInputPort.CreateObserver(
+                    result => {
+                        var newTemp = VoltageToTemperature(result.New);
+
+                        // old might be null if it's the first reading
+                        Units.Temperature? oldTemp = null;
+                        if (result.Old is { } oldVoltage) { oldTemp = VoltageToTemperature(oldVoltage); }
+                                                
                         Temperature = newTemp; // save state
-                        RaiseEventsAndNotify
-                        (
-                            new AtmosphericConditionChangeResult(
-                                new AtmosphericConditions(newTemp, null, null),
-                                new AtmosphericConditions(oldTemp, null, null)
-                            )
+                        RaiseEventsAndNotify (
+                            new ChangeResult<Units.Temperature>(newTemp, oldTemp)
                         );
                     }
                 )
            );
         }
-
-        #endregion Constructors
-
-        #region Methods
 
         /// <summary>
         /// Convenience method to get the current temperature. For frequent reads, use
@@ -247,15 +207,19 @@ namespace Meadow.Foundation.Sensors.Temperature
         /// <param name="sampleIntervalDuration">The time, in milliseconds,
         /// to wait in between samples during a reading.</param>
         /// <returns>A float value that's ann average value of all the samples taken.</returns>
-        public async Task<AtmosphericConditions> Read(int sampleCount = 10, int sampleIntervalDuration = 40)
+        public async Task<ChangeResult<Units.Temperature>> Read(int sampleCount = 10, int sampleIntervalDuration = 40)
         {
+            // grab the old temp and store it in a temp var
+            Units.Temperature? oldTemp = Temperature;
+
             // read the voltage
-            float voltage = await AnalogInputPort.Read(sampleCount, sampleIntervalDuration);
-            // convert and save to our temp property for later retreival
-            Temperature = VoltageToTemperature(voltage);
-            // return
-            return new AtmosphericConditions(Temperature, null, null);
-            //return Temperature;
+            Voltage voltage = await AnalogInputPort.Read(sampleCount, sampleIntervalDuration);
+
+            // convert the voltage
+            var newTemp = VoltageToTemperature(voltage);
+            Temperature = newTemp;
+            
+            return new ChangeResult<Units.Temperature>(newTemp, oldTemp);
         }
 
         /// <summary>
@@ -277,19 +241,20 @@ namespace Meadow.Foundation.Sensors.Temperature
             int sampleIntervalDuration = 40,
             int standbyDuration = 100)
         {
-            AnalogInputPort.StartSampling(sampleCount, sampleIntervalDuration, standbyDuration);
+            AnalogInputPort.StartUpdating(sampleCount, sampleIntervalDuration, standbyDuration);
         }
 
         /// <summary>
         /// Stops sampling the temperature.
         /// </summary>
-        public void StopUpdating() {
-            AnalogInputPort.StopSampling();
+        public void StopUpdating()
+        {
+            AnalogInputPort.StopUpdating();
         }
 
-        protected void RaiseEventsAndNotify(AtmosphericConditionChangeResult changeResult)
+        protected void RaiseEventsAndNotify(ChangeResult<Units.Temperature> changeResult)
         {
-            Updated?.Invoke(this, changeResult);
+            TemperatureUpdated?.Invoke(this, changeResult);
             base.NotifyObservers(changeResult);
         }
 
@@ -298,13 +263,16 @@ namespace Meadow.Foundation.Sensors.Temperature
         /// calibration values.
         /// </summary>
         /// <param name="voltage"></param>
-        /// <returns></returns>
-        protected float VoltageToTemperature(float voltage)
+        /// <returns>temperature in celcius</returns>
+        protected Units.Temperature VoltageToTemperature(Voltage voltage)
         {
-            var yAdjusted = voltage * 1000;
-            return (yAdjusted - _yIntercept) / _millivoltsPerDegreeCentigrade;
+            return new Units.Temperature(
+                SensorCalibration.SampleReading
+                +
+                (voltage.Millivolts - SensorCalibration.MillivoltsAtSampleReading)
+                /
+                SensorCalibration.MillivoltsPerDegreeCentigrade,
+                Units.Temperature.UnitType.Celsius);
         }
-
-        #endregion Methods
     }
 }

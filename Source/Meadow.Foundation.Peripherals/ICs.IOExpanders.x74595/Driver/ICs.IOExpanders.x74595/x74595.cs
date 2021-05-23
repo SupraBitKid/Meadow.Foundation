@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Linq;
+using System.Threading;
+using Meadow.Devices;
 using Meadow.Hardware;
 using Meadow.Utilities;
 
@@ -11,19 +14,9 @@ namespace Meadow.Foundation.ICs.IOExpanders
     /// Control the outputs from a 74595 shift register (or a chain of shift registers)
     /// using a SPI interface.
     /// </remarks>
-    public partial class x74595 : IIODevice
+    public partial class x74595 : IDigitalOutputController
     {
-        #region Properties
-
         public PinDefinitions Pins { get; } = new PinDefinitions();
-
-        #endregion
-
-        #region Constants
-
-        #endregion
-
-        #region Member variables / fields
 
         /// <summary>
         ///     Number of chips required to implement this ShiftRegister.
@@ -36,12 +29,6 @@ namespace Meadow.Foundation.ICs.IOExpanders
         ///     SPI interface used to communicate with the shift registers.
         /// </summary>
         private readonly ISpiPeripheral _spi;
-
-        public DeviceCapabilities Capabilities => throw new NotImplementedException();
-
-        #endregion Member variables / fields
-
-        #region Constructor(s)
 
         /// <summary>
         ///     Default constructor.
@@ -58,7 +45,7 @@ namespace Meadow.Foundation.ICs.IOExpanders
         /// </summary>
         /// <param name="pins">Number of pins in the shift register (should be a multiple of 8 pins).</param>
         /// <param name="spiBus">SpiBus object</param>
-        public x74595(IIODevice device, ISpiBus spiBus, IPin pinChipSelect, int pins = 8)
+        public x74595(IMeadowDevice device, ISpiBus spiBus, IPin pinChipSelect, int pins = 8)
         {
            // if ((pins > 0) && ((pins % 8) == 0))
             if(pins == 8)
@@ -75,10 +62,6 @@ namespace Meadow.Foundation.ICs.IOExpanders
                     "x74595: Size must be greater than zero and a multiple of 8 pins, driver is currently limited to one chip (8 pins)");
             }
         }
-
-        #endregion
-
-        #region Methods
 
         /// <summary>
         /// Creates a new DigitalOutputPort using the specified pin and initial state.
@@ -134,83 +117,9 @@ namespace Meadow.Foundation.ICs.IOExpanders
             return Pins.AllPins.Contains(pin);
         }
 
-        public IDigitalInputPort CreateDigitalInputPort(IPin pin, 
-            InterruptMode interruptMode = InterruptMode.None, 
-            ResistorMode resistorMode = ResistorMode.Disabled, 
-            double debounceDuration = 0,
-            double glitchFilterCycleCount = 0)
+        public IPin GetPin(string pinName)
         {
-            throw new NotImplementedException();
+            return Pins.AllPins.FirstOrDefault(p => p.Name == pinName || p.Key.ToString() == p.Name);
         }
-
-        public IBiDirectionalPort CreateBiDirectionalPort(IPin pin,
-            bool initialState = false,
-            InterruptMode interruptMode = InterruptMode.None,
-            ResistorMode resistorMode = ResistorMode.Disabled,
-            PortDirectionType initialDirection = PortDirectionType.Input,
-            double debounceDuration = 0.0,    // 0 - 1000 msec in .1 increments
-            double glitchDuration = 0.0,      // 0 - 1000 msec in .1 increments
-            OutputType outputType = OutputType.PushPull
-            )
-        {
-            throw new NotImplementedException();
-        }
-
-        public IAnalogInputPort CreateAnalogInputPort(IPin pin, float voltageReference = 3.3F)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPwmPort CreatePwmPort(IPin pin, float frequency = 100, float dutyCycle = 0.5F, bool invert = false)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ISerialPort CreateSerialPort(SerialPortName portName, int baudRate, int dataBits = 8, Parity parity = Parity.None, StopBits stopBits = StopBits.One, int readBufferSize = 4096)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ISpiBus CreateSpiBus(IPin[] pins, long speed)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ISpiBus CreateSpiBus(IPin clock, IPin mosi, IPin miso, long speed)
-        {
-            throw new NotImplementedException();
-        }
-
-        public II2cBus CreateI2cBus(IPin[] pins, ushort speed = 100)
-        {
-            throw new NotImplementedException();
-        }
-
-        public II2cBus CreateI2cBus(IPin clock, IPin data, ushort speed = 100)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ISpiBus CreateSpiBus(IPin clock, IPin mosi, IPin miso, SpiClockConfiguration config)
-        {
-            throw new NotImplementedException();
-        }
-
-        public II2cBus CreateI2cBus(IPin[] pins, int frequencyHz = 100000)
-        {
-            throw new NotImplementedException();
-        }
-
-        public II2cBus CreateI2cBus(IPin clock, IPin data, int frequencyHz = 100000)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetClock(DateTime dateTime)
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
     }
 }

@@ -1,10 +1,13 @@
 ﻿using System;
+using Meadow.Devices;
 using Meadow.Hardware;
 using Meadow.Peripherals.Sensors.Buttons;
 
 namespace Meadow.Foundation.FeatherWings
 {
-    //This driver is not complete
+    /// <summary>
+    /// This driver is not complete
+    /// </summary>
     public class JoyWing
     {
         public event EventHandler OnA;
@@ -19,7 +22,7 @@ namespace Meadow.Foundation.FeatherWings
         public IButton ButtonB { get; private set; }
         public IButton ButtonSelect { get; private set; }
 
-        public JoyWing(IIODevice device, IPin pinX, IPin pinY, IPin pinA, IPin pinB, IPin pinSelect,
+        public JoyWing(IDigitalInputController device, IPin pinX, IPin pinY, IPin pinA, IPin pinB, IPin pinSelect,
             IPin pinJoyHorizontal, IPin pinJoyVertical) :
             this(device.CreateDigitalInputPort(pinX, InterruptMode.EdgeRising),
                 device.CreateDigitalInputPort(pinY, InterruptMode.EdgeRising),

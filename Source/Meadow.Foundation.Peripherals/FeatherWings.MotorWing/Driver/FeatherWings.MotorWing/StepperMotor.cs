@@ -1,4 +1,4 @@
-﻿using Meadow.Foundation.ICs;
+﻿using Meadow.Foundation.ICs.IOExpanders;
 using System;
 using System.Threading;
 
@@ -207,7 +207,6 @@ namespace Meadow.Foundation.FeatherWings
                     // BACKWARDS
                     _currentstep--;
                 }
-
 
                 _currentstep += MICROSTEPS * 4;
                 _currentstep %= MICROSTEPS * 4;
