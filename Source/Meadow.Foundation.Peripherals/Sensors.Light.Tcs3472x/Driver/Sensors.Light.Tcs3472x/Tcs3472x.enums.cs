@@ -3,6 +3,21 @@
     public partial class Tcs3472x
     {
         /// <summary>
+		///     Valid addresses for the sensor.
+		/// </summary>
+		public enum Addresses : byte
+        {
+            /// <summary>
+            /// Bus address 0x29
+            /// </summary>
+            Address_0x29 = 0x29,
+            /// <summary>
+            /// Default bus address
+            /// </summary>
+            Default = Address_0x29
+        }
+
+        /// <summary>
         /// Type of TCS3472X
         /// </summary>
         public enum DeviceType
@@ -24,7 +39,7 @@
             Gain60X = 0x03,
         }
 
-        internal enum Registers
+        protected enum Registers
         {
             ENABLE = 0x00,
             // RGBC interrupt enable.  When asserted, permits RGBC interrupts to be generated.

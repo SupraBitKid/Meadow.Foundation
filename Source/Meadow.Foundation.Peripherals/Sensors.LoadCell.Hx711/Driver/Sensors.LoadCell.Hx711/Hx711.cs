@@ -1,14 +1,22 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Meadow.Hardware;
+using Meadow.Peripherals.Sensors;
+using Meadow.Units;
 
 namespace Meadow.Foundation.Sensors.LoadCell
 {
     /// <summary>
     /// 24-Bit Dual-Channel ADC For Bridge Sensors
     /// </summary>
-    public class Hx711 : FilterableChangeObservableBase<FloatChangeResult, float>,  IDisposable
+    public class Hx711 : SamplingSensorBase<Mass>, IMassSensor, IDisposable
     {
+        //==== events
+        public event EventHandler<IChangeResult<Mass>> MassUpdated = delegate { };
+
+        //==== internals
+        // TODO: move into `Hx711.AdcGainOptions.cs` and rename
         public enum AdcGain
         {
             Gain128 = 1,
@@ -19,58 +27,80 @@ namespace Meadow.Foundation.Sensors.LoadCell
         private const uint GPIO_BASE = 0x40020000;
         private const uint IDR_OFFSET = 0x10;
         private const uint BSSR_OFFSET = 0x18;
-
-        private uint sck_address;
-        private int sck_pin;
-        private uint dout_address;
-        private uint sck_set;
-        private uint sck_clear;
-        private uint dout_mask;
         private const int timing_iterations = 3;
-        private uint tareValue = 0;
-        private decimal gramsPerAdcUnit;
 
-        private IDigitalOutputPort sck;
-        private IDigitalInputPort dout;
-        private bool createdPorts = false;
+        private uint _sck_address;
+        private int _sck_pin;
+        private uint _dout_address;
+        private uint _sck_set;
+        private uint _sck_clear;
+        private uint _dout_mask;
+        private double _gramsPerAdcUnit;
+        private bool _createdPorts = false;
 
-        private object syncRoot { get; } = new object();
+        private IDigitalOutputPort SCK { get; }
+        private IDigitalInputPort DOUT { get; }
+        //private object SyncRoot { get; } = new object();
 
+        //==== properties
         public bool IsDisposed { get; private set; }
         public bool IsSleeping { get; private set; }
         public AdcGain Gain { get; private set; } = AdcGain.Gain128;
+        public uint TareValue { get; set; } = 0;
 
         /// <summary>
-        /// Creates an instance of the NAU7802 Driver class
+        /// Creates an instance of the Hx711 Driver class
         /// </summary>
         /// <param name="bus"></param>
-        public Hx711(IIODevice device, IPin sck, IPin dout)
+        public Hx711(IDigitalInputOutputController device, IPin sck, IPin dout, uint? tareValue = null)
         {
-            this.sck = device.CreateDigitalOutputPort(sck);
-            this.dout = device.CreateDigitalInputPort(dout);
-            createdPorts = true; // we need to dispose what we create
+            SCK = device.CreateDigitalOutputPort(sck);
+            DOUT = device.CreateDigitalInputPort(dout);
+            _createdPorts = true; // we need to dispose what we create
 
             CalculateRegisterValues(sck, dout);
             Start();
+
+            if (tareValue.HasValue)
+            {
+                TareValue = tareValue.Value;
+            }
+            else
+            {
+                // auto-tare
+                Thread.Sleep(20);
+                Tare();
+            }
         }
 
-        public Hx711(IDigitalOutputPort sck, IDigitalInputPort dout)
+        /// <summary>
+        /// Creates an instance of the Hx711 Driver class
+        /// </summary>
+        /// <param name="bus"></param>
+        public Hx711(IDigitalOutputPort sck, IDigitalInputPort dout, uint? tareValue = null)
         {
-            this.sck = sck;
-            this.dout = dout;
+            SCK = sck;
+            DOUT = dout;
 
             CalculateRegisterValues(sck.Pin, dout.Pin);
             Start();
+
+            if (tareValue.HasValue)
+            {
+                TareValue = tareValue.Value;
+            }
+            else
+            {
+                // auto-tare
+                Thread.Sleep(20);
+                Tare();
+            }
         }
 
         private void Start()
         {
             ClockLow(); // this resets the chip
             IsSleeping = false;
-
-            // auto-tare
-            Thread.Sleep(20);
-            Tare();
         }
 
         /// <summary>
@@ -80,7 +110,7 @@ namespace Meadow.Foundation.Sensors.LoadCell
         {
             if (IsSleeping) return;
 
-            lock (syncRoot)
+            lock (samplingLock)
             {
                 ClockHigh();
                 IsSleeping = true;
@@ -94,7 +124,7 @@ namespace Meadow.Foundation.Sensors.LoadCell
         {
             if (!IsSleeping) return;
 
-            lock (syncRoot)
+            lock (samplingLock)
             {
                 ClockHigh();
                 IsSleeping = false;
@@ -106,8 +136,8 @@ namespace Meadow.Foundation.Sensors.LoadCell
         /// </summary>
         public void Tare()
         {
-            tareValue = ReadADC();
-            Console.WriteLine($"Tare base = {tareValue}");
+            TareValue = ReadADC();
+            Console.WriteLine($"Tare base = {TareValue}");
         }
 
         /// <summary>
@@ -125,7 +155,7 @@ namespace Meadow.Foundation.Sensors.LoadCell
                 sum += ReadADC();
             }
 
-            return (int)((sum / reads) - tareValue);
+            return (int)((sum / reads) - TareValue);
         }
 
         /// <summary>
@@ -133,18 +163,18 @@ namespace Meadow.Foundation.Sensors.LoadCell
         /// </summary>
         /// <param name="factor"></param>
         /// <param name="knownValue"></param>
-        public void SetCalibrationFactor(int factor, Weight knownValue)
+        public void SetCalibrationFactor(int factor, Mass knownValue)
         {
-            gramsPerAdcUnit = knownValue.ConvertTo(WeightUnits.Grams) / (decimal)factor;
+            _gramsPerAdcUnit = (knownValue.Grams / factor);
         }
 
         /// <summary>
         /// Gets the current sensor weight
         /// </summary>
         /// <returns></returns>
-        public Weight GetWeight()
+        protected override Task<Mass> ReadSensor()
         {
-            if (gramsPerAdcUnit == 0)
+            if (_gramsPerAdcUnit == 0)
             {
                 throw new Exception("Calibration factor has not been set");
             }
@@ -152,7 +182,7 @@ namespace Meadow.Foundation.Sensors.LoadCell
             // get an ADC conversion
             var raw = ReadADC();
             // subtract the tare
-            var adc = raw - tareValue;
+            var adc = raw - TareValue;
 
             // two's complement
             int value;
@@ -166,10 +196,10 @@ namespace Meadow.Foundation.Sensors.LoadCell
             }
 
             // convert to grams
-            var grams = value * gramsPerAdcUnit;
+            var grams = value * _gramsPerAdcUnit;
 
             // convert to desired units
-            return new Weight(grams, WeightUnits.Grams);
+            return Task.FromResult(new Mass(grams, Units.Mass.UnitType.Grams));
         }
 
         private void CalculateRegisterValues(IPin sck, IPin dout)
@@ -180,15 +210,15 @@ namespace Meadow.Foundation.Sensors.LoadCell
             // Bits 15:0  set
             // Port offset = 0x0400 * index (with A being index 0)
             int gpio_port = sck.Key.ToString()[1] - 'A';
-            sck_pin = int.Parse(sck.Key.ToString().Substring(2));
-            sck_address = GPIO_BASE | (0x400u * (uint)gpio_port) | BSSR_OFFSET;
-            sck_set = 1u << sck_pin;
-            sck_clear = 1u << (16 + sck_pin);
+            _sck_pin = int.Parse(sck.Key.ToString().Substring(2));
+            _sck_address = GPIO_BASE | (0x400u * (uint)gpio_port) | BSSR_OFFSET;
+            _sck_set = 1u << _sck_pin;
+            _sck_clear = 1u << (16 + _sck_pin);
 
             gpio_port = dout.Key.ToString()[1] - 'A';
             var gpio_pin = int.Parse(dout.Key.ToString().Substring(2));
-            dout_address = GPIO_BASE | (0x400u * (uint)gpio_port) | IDR_OFFSET;
-            dout_mask = 1u << gpio_pin;
+            _dout_address = GPIO_BASE | (0x400u * (uint)gpio_port) | IDR_OFFSET;
+            _dout_mask = 1u << gpio_pin;
         }
 
         private unsafe void ClockLow()
@@ -198,8 +228,8 @@ namespace Meadow.Foundation.Sensors.LoadCell
             // We don't have a simple micro-sleep, so we simply make multiple calls to assert state to suck up the required timing
             for (int i = 0; i < timing_iterations; i++)
             {
-                var val = 1u << (16 + sck_pin); // low
-                * (uint*)sck_address = val;
+                var val = 1u << (16 + _sck_pin); // low
+                *(uint*)_sck_address = val;
             }
         }
 
@@ -207,8 +237,8 @@ namespace Meadow.Foundation.Sensors.LoadCell
         {
             for (int i = 0; i < timing_iterations; i++)
             {
-                var val = 1u << sck_pin; // high
-                *(uint*)sck_address = val;
+                var val = 1u << _sck_pin; // high
+                *(uint*)_sck_address = val;
             }
         }
 
@@ -216,10 +246,10 @@ namespace Meadow.Foundation.Sensors.LoadCell
         {
             uint count = 0;
 
-            lock (syncRoot)
+            lock (samplingLock)
             {
                 // data line low indicates ready
-                while((*(uint*)dout_address & dout_mask) != 0)
+                while ((*(uint*)_dout_address & _dout_mask) != 0)
                 {
                     Thread.Sleep(0);
                 }
@@ -230,7 +260,7 @@ namespace Meadow.Foundation.Sensors.LoadCell
                     count = count << 1;
                     ClockLow();
 
-                    if ((*(uint*)dout_address & dout_mask) != 0) // read DOUT state
+                    if ((*(uint*)_dout_address & _dout_mask) != 0) // read DOUT state
                     {
                         count++;
                     }
@@ -248,12 +278,37 @@ namespace Meadow.Foundation.Sensors.LoadCell
             return count;
         }
 
+        public TimeSpan DefaultSamplePeriod { get; } = TimeSpan.FromSeconds(1);
+
+        /// <summary>
+        /// The last read Mass.
+        /// </summary>
+        public Mass? Mass { get; private set; }
+
+        /// <summary>
+        /// Inheritance-safe way to raise events and notify observers.
+        /// </summary>
+        /// <param name="changeResult"></param>
+        protected override void RaiseEventsAndNotify(IChangeResult<Mass> changeResult)
+        {
+            try
+            {
+                MassUpdated?.Invoke(this, changeResult);
+                base.RaiseEventsAndNotify(changeResult);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"HX711 event handler threw: {ex.Message}");
+                throw;
+            }
+        }
+
         protected virtual void Dispose(bool disposing)
         {
-            if (createdPorts)
+            if (_createdPorts)
             {
-                sck.Dispose();
-                dout.Dispose();
+                SCK.Dispose();
+                DOUT.Dispose();
             }
             IsDisposed = true;
         }

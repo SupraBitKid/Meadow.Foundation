@@ -1,4 +1,5 @@
-﻿using Meadow.Hardware;
+﻿using Meadow.Devices;
+using Meadow.Hardware;
 using System;
 
 namespace Meadow.Foundation.Leds
@@ -8,6 +9,9 @@ namespace Meadow.Foundation.Leds
     /// </summary>
     public class LedBarGraph
     {
+        /// <summary>
+        /// Array to hold LED objects for bar 
+        /// </summary>
         protected Led[] leds;
 
         /// <summary>
@@ -18,17 +22,17 @@ namespace Meadow.Foundation.Leds
         /// <summary>
         /// A value between 0 and 1 that controls the number of LEDs that are activated
         /// </summary>
-        float percentage;
         public float Percentage
         {
             get => percentage;
             set => SetPercentage(percentage = value);
         }
+        float percentage;
 
         /// <summary>
         /// Create an LedBarGraph instance from an array of IPins
         /// </summary>
-        public LedBarGraph(IIODevice device, IPin[] pins)
+        public LedBarGraph(IDigitalOutputController device, IPin[] pins)
         {
             leds = new Led[pins.Length];
 

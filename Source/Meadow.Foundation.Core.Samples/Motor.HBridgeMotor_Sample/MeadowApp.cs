@@ -6,7 +6,7 @@ using Meadow.Foundation.Motors;
 
 namespace Motor.HBridgeMotor_Sample
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7MicroV2, MeadowApp>
     {
         protected HBridgeMotor motor1;
 
@@ -16,9 +16,9 @@ namespace Motor.HBridgeMotor_Sample
 
             motor1 = new HBridgeMotor
             (
-                a1Pin: Device.CreatePwmPort(Device.Pins.D07),
-                a2Pin: Device.CreatePwmPort(Device.Pins.D08),
-                enablePin: Device.CreateDigitalOutputPort(Device.Pins.D09)
+                a1Port: Device.CreatePwmPort(Device.Pins.D07),
+                a2Port: Device.CreatePwmPort(Device.Pins.D08),
+                enablePort: Device.CreateDigitalOutputPort(Device.Pins.D09)
             );
             
             TestMotor();
@@ -31,15 +31,15 @@ namespace Motor.HBridgeMotor_Sample
             while (true)
             {
                 // Motor Forwards
-                motor1.Speed = 1f;
+                motor1.Power = 1f;
                 Thread.Sleep(1000);
 
                 // Motor Stops
-                motor1.Speed = 0f;
+                motor1.Power = 0f;
                 Thread.Sleep(500);
 
                 // Motor Backwards
-                motor1.Speed = -1f;
+                motor1.Power = -1f;
                 Thread.Sleep(1000);
             }
         }

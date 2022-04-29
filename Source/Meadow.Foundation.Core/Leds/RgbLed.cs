@@ -12,8 +12,8 @@ namespace Meadow.Foundation.Leds
     /// </summary>
     public partial class RgbLed : IRgbLed
     {
-        protected Task animationTask;
-        protected CancellationTokenSource cancellationTokenSource;
+        Task? animationTask;
+        CancellationTokenSource? cancellationTokenSource;
 
         /// <summary>
         /// Get the color the LED has been set to.
@@ -50,7 +50,7 @@ namespace Meadow.Foundation.Leds
                 isOn = value;
             }
         }
-        protected bool isOn;
+        bool isOn;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:Meadow.Foundation.Leds.RgbLed"/> class.
@@ -61,7 +61,7 @@ namespace Meadow.Foundation.Leds
         /// <param name="bluePin">Blue Pin</param>
         /// <param name="commonType">Is Common Cathode</param>
         public RgbLed(
-            IIODevice device, 
+            IDigitalOutputController device, 
             IPin redPin, 
             IPin greenPin, 
             IPin bluePin, 
@@ -173,6 +173,14 @@ namespace Meadow.Foundation.Leds
             animationTask.Start();
         }
         
+        /// <summary>
+        /// Turn the LED on and off (blink)
+        /// </summary>
+        /// <param name="color"></param>
+        /// <param name="onDuration"></param>
+        /// <param name="offDuration"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         protected async Task StartBlinkAsync(Colors color, int onDuration, int offDuration, CancellationToken cancellationToken)
         {
             while (true)
@@ -183,9 +191,9 @@ namespace Meadow.Foundation.Leds
                 }
 
                 SetColor(color);
-                await Task.Delay((int)onDuration);
+                await Task.Delay(onDuration);
                 SetColor(Colors.Black);
-                await Task.Delay((int)offDuration);
+                await Task.Delay(offDuration);
             }
         }
 

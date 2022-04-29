@@ -1,4 +1,5 @@
-﻿using Meadow.Hardware;
+﻿using Meadow.Devices;
+using Meadow.Hardware;
 using Meadow.Peripherals.Displays;
 
 namespace Meadow.Foundation.Displays.Lcd
@@ -10,7 +11,7 @@ namespace Meadow.Foundation.Displays.Lcd
         public TextDisplayConfig DisplayConfig => characterDisplay?.DisplayConfig;
 
         public CharacterDisplay(
-            IIODevice device,
+            IMeadowDevice device,
             IPin pinRS,
             IPin pinE,
             IPin pinD4,
@@ -35,7 +36,7 @@ namespace Meadow.Foundation.Displays.Lcd
         }
 
         public CharacterDisplay(
-            IIODevice device,
+            IMeadowDevice device,
             IPin pinV0,
             IPin pinRS,
             IPin pinE,
@@ -61,7 +62,7 @@ namespace Meadow.Foundation.Displays.Lcd
             characterDisplay = new GpioCharacterDisplay(portV0, portRS, portE, portD4, portD5, portD6, portD7, rows, columns);
         }
 
-        public CharacterDisplay(II2cBus i2cBus, byte address = I2cCharacterDisplay.DefaultI2cAddress, byte rows = 4, byte columns = 20)
+        public CharacterDisplay(II2cBus i2cBus, byte address = (byte)I2cCharacterDisplay.Addresses.Default, byte rows = 4, byte columns = 20)
         {
             characterDisplay = new I2cCharacterDisplay(i2cBus, address, rows, columns);
         }

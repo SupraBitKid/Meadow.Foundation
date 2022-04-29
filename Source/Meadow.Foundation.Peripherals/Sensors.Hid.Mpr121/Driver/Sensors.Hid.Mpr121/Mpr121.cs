@@ -8,8 +8,6 @@ namespace Meadow.Foundation.Sensors.Hid
 {
     public partial class Mpr121
     {
-        
-
         private readonly II2cPeripheral i2cPeripheral;
 
         private int refreshPeriod;
@@ -18,20 +16,11 @@ namespace Meadow.Foundation.Sensors.Hid
 
         private Dictionary<Channels, bool> channelStatus;
 
-        
-
-        
-
         /// <summary>
         /// Notifies about a the channel statuses have been changed.
         /// Refresh period can be changed by setting PeriodRefresh property.
         /// </summary>
         public event EventHandler<ChannelStatusChangedEventArgs> ChannelStatusesChanged;
-
-        /// <summary>
-        /// MPR121 Default I2C Address.
-        /// </summary>
-        public const byte DefaultI2cAddress = 0x5A;
 
         private static readonly int NumberOfChannels = Enum.GetValues(typeof(Channels)).Length;
 
@@ -61,14 +50,10 @@ namespace Meadow.Foundation.Sensors.Hid
             }
         }
 
-        
-
-        
-
         /// <summary>
         ///     Create a new MPR121 keypad object.
         /// </summary>
-        public Mpr121(II2cBus i2cBus, byte address = DefaultI2cAddress, int refreshPeriod = -1, Mpr121Configuration configuration = null)
+        public Mpr121(II2cBus i2cBus, byte address = (byte)Addresses.Default, int refreshPeriod = -1, Mpr121Configuration configuration = null)
         {
             this.refreshPeriod = refreshPeriod;
 
@@ -92,8 +77,6 @@ namespace Meadow.Foundation.Sensors.Hid
             
             timer = new Timer(RefreshChannelStatus, this, refreshPeriod, refreshPeriod);
         }
-
-        
 
         /// <summary>
         /// Reads the channel status of MPR121 controller.
@@ -196,7 +179,7 @@ namespace Meadow.Foundation.Sensors.Hid
             var period = RefreshPeriod;
             RefreshPeriod = 0;
 
-            var rawStatus = i2cPeripheral.ReadUShort(0x00, ByteOrder.LittleEndian);
+            var rawStatus = i2cPeripheral.ReadRegisterAsUShort(0x00, ByteOrder.LittleEndian);
 
             bool isStatusChanged = false;
 

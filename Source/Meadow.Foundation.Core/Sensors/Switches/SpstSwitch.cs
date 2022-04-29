@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Meadow.Hardware;
 using Meadow.Peripherals.Sensors;
 using Meadow.Peripherals.Switches;
@@ -16,8 +16,6 @@ namespace Meadow.Foundation.Sensors.Switches
     /// </summary>
     public class SpstSwitch : ISwitch, ISensor
     {
-        #region Properties
-
         /// <summary>
         /// Describes whether or not the switch circuit is closed/connected (IsOn = true), or open (IsOn = false).
         /// </summary>
@@ -37,10 +35,6 @@ namespace Meadow.Foundation.Sensors.Switches
         /// </summary>
         public IDigitalInputPort DigitalIn { get; protected set; }
 
-        #endregion
-
-        #region Constructors
-
         /// <summary>
         /// Instantiates a new SpstSwitch object connected to the specified digital pin, and with the specified CircuitTerminationType in the type parameter.
         /// </summary>
@@ -50,7 +44,7 @@ namespace Meadow.Foundation.Sensors.Switches
         /// <param name="resistorMode"></param>
         /// <param name="debounceDuration"></param>
         /// <param name="glitchFilterCycleCount"></param>
-        public SpstSwitch(IIODevice device, IPin pin, InterruptMode interruptMode, ResistorMode resistorMode, int debounceDuration = 20, int glitchFilterCycleCount = 0) :
+        public SpstSwitch(IDigitalInputController device, IPin pin, InterruptMode interruptMode, ResistorMode resistorMode, int debounceDuration = 20, int glitchFilterCycleCount = 0) :
             this(device.CreateDigitalInputPort(pin, interruptMode, resistorMode, debounceDuration, glitchFilterCycleCount)) { }
 
         /// <summary>
@@ -63,20 +57,14 @@ namespace Meadow.Foundation.Sensors.Switches
             DigitalIn.Changed += DigitalInChanged;
         }
 
-        #endregion
-
-        #region Methods
-
         /// <summary>
         /// Event handler when switch value has been changed
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected void DigitalInChanged(object sender, DigitalInputPortEventArgs e)
+        protected void DigitalInChanged(object sender, DigitalPortResult e)
         {
             IsOn = DigitalIn.State;
         }
-
-        #endregion
     }
 }

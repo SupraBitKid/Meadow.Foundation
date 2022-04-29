@@ -1,7 +1,7 @@
-﻿using Meadow.Hardware;
+﻿using Meadow.Devices;
+using Meadow.Hardware;
 using System;
 using System.Linq;
-using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 
@@ -166,14 +166,15 @@ namespace Meadow.Foundation.Transceivers
 
         bool ack_payloads_enabled;
 
-        byte config_reg, addr_width, payload_size = 32;
-
-        byte[] address = new byte[6];
-
-        byte[] pipe0_reading_address = new byte[5];
+        byte config_reg;
+       //byte addr_width;
+        byte payload_size = 32;
+        readonly byte[] address = new byte[6];
+        readonly byte[] pipe0_reading_address = new byte[5];
+        readonly Memory<byte> readBuffer = new byte[256]; //ToDo ... check size
 
         public Nrf24l01(
-            IIODevice device, 
+            IMeadowDevice device, 
             ISpiBus spiBus, 
             IPin chipEnablePin, 
             IPin chipSelectLine, 
@@ -273,8 +274,8 @@ namespace Meadow.Foundation.Transceivers
 
         void ToggleFeatures()
         {
-            rf24.WriteByte(ACTIVATE);
-            rf24.WriteByte(0x73);
+            rf24.Write(ACTIVATE);
+            rf24.Write(0x73);
         }
 
         public void SetChannel(byte channel)
@@ -291,12 +292,12 @@ namespace Meadow.Foundation.Transceivers
 
         void FlushRx()
         {
-            rf24.WriteByte(FLUSH_RX);
+            rf24.Write(FLUSH_RX);
         }
 
         void FlushTx()
         {
-            rf24.WriteByte(FLUSH_TX);
+            rf24.Write(FLUSH_TX);
         }
 
         void PowerDown()
@@ -410,7 +411,7 @@ namespace Meadow.Foundation.Transceivers
 
         void WriteRegisters(byte address, byte[] data)
         {
-            rf24.WriteRegisters((byte)(W_REGISTER | (REGISTER_MASK & address)), data);
+            rf24.WriteRegister((byte)(W_REGISTER | (REGISTER_MASK & address)), data);
         }
 
         void WriteRegister(byte address, byte value)
@@ -467,46 +468,52 @@ namespace Meadow.Foundation.Transceivers
             return false;
         }
 
-        public void Read(byte[] buf, byte len)
+        //ToDo clean this up
+        public byte[] Read(byte length)
         {
-            ReadPayload(buf, len);
+            var data = ReadPayload(readBuffer.Span, length);
             WriteRegister(NRF_STATUS, (byte) (1 << RX_DR | 1 << MAX_RT | 1 << TX_DS));
+
+            return readBuffer.Span[0..length].ToArray();
         }
 
-        byte ReadPayload(byte[] buf, byte data_len)
+        byte ReadPayload(Span<byte> buffer, byte length)
         {
             byte status;
-            byte[] current = buf.ToArray();
+            byte[] current = buffer.ToArray();
 
-            if (data_len > payload_size)
+            if (length > payload_size)
             {
-                data_len = payload_size;
+                length = payload_size;
             }
 
             byte blank_len = 0;
+
             if (!dynamic_payloads_enabled)
             {
-                blank_len = (byte)(payload_size - data_len);
+                blank_len = (byte)(payload_size - length);
             }
             
-            Console.WriteLine($"ReadPayload - data_len: {data_len}");
+            Console.WriteLine($"ReadPayload - data_len: {length}");
             Console.WriteLine($"ReadPayload - blank_len: {blank_len}");
 
             status = rf24.ReadRegister(R_RX_PAYLOAD);
 
             Console.Write($"ReadPayload - payload:");
 
-            var values = rf24.ReadRegisters(R_RX_PAYLOAD, data_len);
-            for (int i = 0; i < data_len; i++)
+            rf24.ReadRegister(R_RX_PAYLOAD, readBuffer.Span[0..length]);
+
+            
+            for (int i = 0; i < length; i++)
             {
-                if (values[i] == 0)
+                if (readBuffer.Span[i] == 0)
                 {
                     current[i] = 32;
                     Console.Write(current[i]);
                 }
                 else
                 {
-                    current[i] = values[i];
+                    current[i] = readBuffer.Span[i];
                     Console.Write(current[i]);
                 }
             }
@@ -517,9 +524,9 @@ namespace Meadow.Foundation.Transceivers
 
             Console.WriteLine("");
 
-            while (blank_len>0)
+            while (blank_len > 0)
             {
-                rf24.WriteRead(new Byte[] { 0xff }, 1);
+                rf24.Write(0xFF);
                 blank_len--;
             }
 
@@ -527,7 +534,7 @@ namespace Meadow.Foundation.Transceivers
             
             return status;
         }
-
+        
         public void OpenWritingPipe(byte[] address)
         {
             WriteRegisters(RX_ADDR_P0, address);
@@ -605,8 +612,8 @@ namespace Meadow.Foundation.Transceivers
             if (dynamic_payloads_enabled)
                 blank_len = (byte)(payload_size - data_len);
 
-            rf24.WriteByte(writeType);
-            rf24.WriteBytes(current);
+            rf24.Write(writeType);
+            rf24.Write(current);
         }
 
         byte GetStatus()

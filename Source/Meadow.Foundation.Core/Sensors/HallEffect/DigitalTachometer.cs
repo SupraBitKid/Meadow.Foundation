@@ -1,14 +1,11 @@
 ﻿using Meadow.Hardware;
-using Meadow.Peripherals.Sensors;
 using System;
-using System.Diagnostics;
 
 namespace Meadow.Foundation.Sensors.HallEffect
 {
     /// <summary>
     /// Represents a Lineal Hall Effect tachometer.
     /// 
-    /// Note: This class is not yet implemented.
     /// </summary>
     public class LinearHallEffectTachometer
     {
@@ -16,7 +13,7 @@ namespace Meadow.Foundation.Sensors.HallEffect
         /// Event raised when the RPM change is greater than the 
         /// RPMChangeNotificationThreshold value.
         /// </summary>
-        public event EventHandler<FloatChangeResult> RPMsChanged = delegate { };
+        public event EventHandler<ChangeResult<float>> RPMsChanged = delegate { };
 
         /// <summary>
         /// Any changes to the RPMs that are greater than the RPM change
@@ -38,27 +35,47 @@ namespace Meadow.Foundation.Sensors.HallEffect
         /// <summary>
         /// Returns number of revolutions per minute.
         /// </summary>
-        public int RPMs => (int)_RPMs; 
+        public int RPMs => (int)rpms; 
 
-        protected float _RPMs = 0.0F;
-        protected float _lastNotifiedRPMs = 0.0F;
-        protected DateTime _revolutionTimeStart = DateTime.MinValue;
-        protected ushort _numberOfReads = 0; //
+        /// <summary>
+        /// Revolutions pers minute 
+        /// </summary>
+        protected float rpms = 0.0F;
+        /// <summary>
+        /// Last notified RPM value
+        /// </summary>
+        protected float lastNotifiedRPMs = 0.0F;
+        /// <summary>
+        /// Revolution start time
+        /// </summary>
+        protected DateTime revolutionTimeStart = DateTime.MinValue;
+        /// <summary>
+        /// Number of reads
+        /// </summary>
+        protected ushort numberOfReads = 0; 
 
         /// <summary>
         /// LinearHallEffectTachometer driver
         /// </summary>
+        /// <param name="device">IDigitalInputController to create digital input port</param>
         /// <param name="inputPin"></param>
         /// <param name="type"></param>
         /// <param name="numberOfMagnets"></param>
         /// <param name="rpmChangeNotificationThreshold"></param>
-        public LinearHallEffectTachometer(IIODevice device, IPin inputPin, CircuitTerminationType type = CircuitTerminationType.CommonGround,
+        public LinearHallEffectTachometer(IDigitalInputController device, IPin inputPin, CircuitTerminationType type = CircuitTerminationType.CommonGround,
             ushort numberOfMagnets = 2, float rpmChangeNotificationThreshold = 1.0F) :
             this(device.CreateDigitalInputPort(inputPin), type, numberOfMagnets, rpmChangeNotificationThreshold)
         {
            
         }
 
+        /// <summary>
+        /// LinearHallEffectTachometer driver
+        /// </summary>
+        /// <param name="inputPort"></param>
+        /// <param name="type"></param>
+        /// <param name="numberOfMagnets"></param>
+        /// <param name="rpmChangeNotificationThreshold"></param>
         public LinearHallEffectTachometer(IDigitalInputPort inputPort, CircuitTerminationType type = CircuitTerminationType.CommonGround,
             ushort numberOfMagnets = 2, float rpmChangeNotificationThreshold = 1.0F)
         {
@@ -74,42 +91,42 @@ namespace Meadow.Foundation.Sensors.HallEffect
             InputPort.Changed += InputPortChanged;
         }
 
-        void InputPortChanged(object sender, DigitalInputPortEventArgs e)
+        void InputPortChanged(object sender, DigitalPortResult e)
         {
             var time = DateTime.Now;
 
             // if it's the very first read, set the time and bail out
-            if (_numberOfReads == 0 && _revolutionTimeStart == DateTime.MinValue)
+            if (numberOfReads == 0 && revolutionTimeStart == DateTime.MinValue)
             {
                 //S.Console.WriteLine("First reading.");
-                _revolutionTimeStart = time;
-                _numberOfReads++;
+                revolutionTimeStart = time;
+                numberOfReads++;
                 return;
             }
 
             // increment our count of magnet detections
-            _numberOfReads++;
+            numberOfReads++;
 
             // if we've made a full revolution
-            if (_numberOfReads == NumberOfMagnets)
+            if (numberOfReads == NumberOfMagnets)
             {
                 //S.Console.WriteLine("Viva La Revolucion!");
                 // calculate how much time has elapsed since the start of the revolution 
-                var revolutionTime = time - _revolutionTimeStart;
+                var revolutionTime = time - revolutionTimeStart;
 
                 //S.Console.WriteLine("RevTime Milliseconds: " + revolutionTime.Milliseconds.ToString());
 
                 if (revolutionTime.Milliseconds < 3) {
                     //S.Console.WriteLine("rev time < 3. Garbage, bailing.");
-                    _numberOfReads = 0;
-                    _revolutionTimeStart = time;
+                    numberOfReads = 0;
+                    revolutionTimeStart = time;
                     return;
                 }
 
                 // calculate our rpms
                 // RPSecond = 1000 / revTime.millis
                 // PPMinute = RPSecond * 60
-                _RPMs = ((float)1000 / (float)revolutionTime.Milliseconds) * (float)60;
+                rpms = ((float)1000 / (float)revolutionTime.Milliseconds) * (float)60;
 
                 //if (revolutionTime.Milliseconds < 5) {
                 //    S.Console.WriteLine("revolution time was < 5. garbage results.");
@@ -119,21 +136,24 @@ namespace Meadow.Foundation.Sensors.HallEffect
 
 
                 // reset our number of reads and store our revolution time start
-                _numberOfReads = 0;
-                _revolutionTimeStart = time;
+                numberOfReads = 0;
+                revolutionTimeStart = time;
 
                 // if the change is enough, raise the event.
-                if (Math.Abs(_lastNotifiedRPMs - _RPMs) > RPMChangeNotificationThreshold)
+                if (Math.Abs(lastNotifiedRPMs - rpms) > RPMChangeNotificationThreshold)
                 {
                     OnRaiseRPMChanged();
                 }
             }
         }
 
+        /// <summary>
+        /// Notify when RPMs change
+        /// </summary>
         protected void OnRaiseRPMChanged()
         {
-            RPMsChanged(this, new FloatChangeResult(_lastNotifiedRPMs, _RPMs));
-            _lastNotifiedRPMs = _RPMs;
+            RPMsChanged(this, new ChangeResult<float>(lastNotifiedRPMs, rpms));
+            lastNotifiedRPMs = rpms;
         }
     }
 }

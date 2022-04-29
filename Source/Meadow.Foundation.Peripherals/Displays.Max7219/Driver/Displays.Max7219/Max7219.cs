@@ -1,160 +1,125 @@
 ﻿using System;
 using System.Threading;
+using Meadow.Devices;
 using Meadow.Hardware;
+using Meadow.Units;
 
 namespace Meadow.Foundation.Displays
 {
     /// <summary>
     /// Max7219 LED matrix driver
     /// </summary>
-    public class Max7219 : DisplayBase
+    public partial class Max7219
     {
         /// <summary>
         /// MAX7219 Spi Clock Frequency
         /// </summary>
-        public static int SpiClockFrequency => 10000000;
+        public static Frequency DefaultSpiBusSpeed = new Frequency(6000, Frequency.UnitType.Kilohertz);
 
         /// <summary>
-        /// Number of digits Register per Module
+        /// Number of digits per Module
         /// </summary>
-        public const int NumDigits = 8;
+        public const int DigitsPerDevice = 8;
 
         /// <summary>
         /// Number of cascaded devices
         /// </summary>
-        /// <value></value>
-        public int DeviceCount => DeviceRows * DeviceColumns;
-        public int DeviceRows { get; private set; }
-        public int DeviceColumns { get; private set; }
+        public int DeviceCount => DigitRows * DigitColumns / DigitsPerDevice;
+
+        /// <summary>
+        /// Number of rows when representing digits
+        /// </summary>
+        public int DigitRows { get; private set; }
+
+        /// <summary>
+        /// Number of columns when representing digits 
+        /// </summary>
+        public int DigitColumns { get; private set; }
 
         /// <summary>
         /// Gets the total number of digits (cascaded devices * num digits)
         /// </summary>
-        public int Length => DeviceCount * NumDigits;
+        public int Length => DigitRows * DigitColumns;
 
-        public override DisplayColorMode ColorMode => DisplayColorMode.Format1bpp;
-
-        public override int Width => 8 * DeviceColumns;
-
-        public override int Height => 8 * DeviceRows;
-
-        private ISpiPeripheral max7219;
+        private readonly ISpiPeripheral max7219;
 
         /// <summary>
         /// internal buffer used to write to registers for all devices.
         /// </summary>
         private readonly byte[] writeBuffer;
-        private readonly byte[] readBuffer;
-
-        private readonly SpiBus spi;
-        private readonly IDigitalOutputPort chipSelectPort;
 
         /// <summary>
         /// A Buffer that contains the values of the digits registers per device
         /// </summary>
         private readonly byte[,] buffer;
-
-        private Color currentPen;
-
+        
         private readonly byte DECIMAL = 0b10000000;
 
-        
-
-        
-
-        public enum Max7219Type
-        {
-            Character, 
-            Digital,
-            Display, 
-        }
-
-        public enum CharacterType : byte
-        {
-            _0     = 0x00,
-            _1     = 0x01,
-            _2     = 0x02,
-            _3     = 0x03,
-            _4     = 0x04,
-            _5     = 0x05,
-            _6     = 0x06,
-            _7     = 0x07,
-            _8     = 0x08,
-            _9     = 0x09,
-            Hyphen = 0x0A,
-            E      = 0x0B,
-            H      = 0x0C,
-            L      = 0x0D,
-            P      = 0x0E,
-            Blank  = 0x0F,
-            count
-
-        }
-
-        internal enum Register : byte
-        {
-            NoOp        = 0x00,
-            Digit0      = 0x01,
-            Digit1      = 0x02,
-            Digit2      = 0x03,
-            Digit3      = 0x04,
-            Digit4      = 0x05,
-            Digit5      = 0x06,
-            Digit6      = 0x07,
-            Digit7      = 0x08,
-            DecodeMode  = 0x09,
-            Intensity   = 0x0A,
-            ScanLimit   = 0x0B,
-            ShutDown    = 0x0C,
-            DisplayTest = 0x0F
-        }
-
-        
-
-        
-
-        public Max7219(ISpiBus spiBus, IDigitalOutputPort csPort, int deviceCount = 1, Max7219Type maxMode = Max7219Type.Display)
-            :this(spiBus, csPort, 8, 1, maxMode)
+        /// <summary>
+        /// Create a new Max7219 object
+        /// </summary>
+        /// <param name="spiBus">SPI bus</param>
+        /// <param name="chipselectPort">Chip select port</param>
+        /// <param name="deviceCount">Number of cascaded devices</param>
+        /// <param name="maxMode">Display mode of max7219</param>
+        public Max7219(ISpiBus spiBus, IDigitalOutputPort chipselectPort, int deviceCount = 1, Max7219Mode maxMode = Max7219Mode.Display)
+            :this(spiBus, chipselectPort, deviceCount, 1, maxMode)
         {
         }
 
-        public Max7219(ISpiBus spiBus, IDigitalOutputPort csPort, int deviceRows, int deviceColumns, Max7219Type maxMode = Max7219Type.Display)
+        /// <summary>
+        /// Create a new Max7219 object
+        /// </summary>
+        /// <param name="spiBus">SPI bus</param>
+        /// <param name="chipselectPort">Chip select port</param>
+        /// <param name="deviceRows">Number of devices cascaded vertically</param>
+        /// <param name="deviceColumns">Number of devices cascaded horizontally</param>
+        /// <param name="maxMode">Display mode of max7219</param>
+        public Max7219(ISpiBus spiBus, IDigitalOutputPort chipselectPort, int deviceRows, int deviceColumns, Max7219Mode maxMode = Max7219Mode.Display)
         {
-            spi = (SpiBus)spiBus;
-            chipSelectPort = csPort;
+            max7219 = new SpiPeripheral(spiBus, chipselectPort);
 
-            max7219 = new SpiPeripheral(spiBus, csPort);
+            DigitRows = deviceRows;
+            DigitColumns = deviceColumns * DigitsPerDevice;
 
-            DeviceRows = deviceRows;
-            DeviceColumns = deviceColumns;
+            buffer = new byte[DeviceCount, DigitsPerDevice];
 
-            buffer = new byte[DeviceCount, NumDigits];
             writeBuffer = new byte[2 * DeviceCount];
-            readBuffer = new byte[2 * DeviceCount];
 
             Initialize(maxMode);
         }
 
         /// <summary>
-        /// Creates a Max7219 Device given a <see paramref="spiBus" /> to communicate over and the
-        /// number of devices that are cascaded.
+        /// Create a new Max7219 object
         /// </summary>
-        public Max7219(IIODevice device, ISpiBus spiBus, IPin csPin, int deviceRows = 1, int deviceColumns = 1, Max7219Type maxMode = Max7219Type.Display)
-            : this(spiBus, device.CreateDigitalOutputPort(csPin), deviceRows, deviceColumns, maxMode)
+        /// <param name="device">IMeadowDevice</param>
+        /// <param name="spiBus">SPI bus</param>
+        /// <param name="chipSelectPin">Chip select pin</param>
+        /// <param name="deviceRows">Number of devices cascaded vertically</param>
+        /// <param name="deviceColumns">Number of devices cascaded horizontally</param>
+        /// <param name="maxMode">Display mode of max7219</param>
+        public Max7219(IMeadowDevice device, ISpiBus spiBus, IPin chipSelectPin, int deviceRows = 1, int deviceColumns = 1, Max7219Mode maxMode = Max7219Mode.Display)
+            : this(spiBus, device.CreateDigitalOutputPort(chipSelectPin), deviceRows, deviceColumns, maxMode)
         { }
 
-        public Max7219(IIODevice device, ISpiBus spiBus, IPin csPin, int deviceCount = 1, Max7219Type maxMode = Max7219Type.Display)
-            : this(spiBus, device.CreateDigitalOutputPort(csPin), deviceCount, 1, maxMode)
+        /// <summary>
+        /// Create a new Max7219 object
+        /// </summary>
+        /// <param name="device">IMeadowDevice</param>
+        /// <param name="spiBus">SPI bus</param>
+        /// <param name="chipSelectPin">Chip select pin</param>
+        /// <param name="deviceCount">Number of cascaded devices</param>
+        /// <param name="maxMode">Display mode of max7219</param>
+        public Max7219(IMeadowDevice device, ISpiBus spiBus, IPin chipSelectPin, int deviceCount = 1, Max7219Mode maxMode = Max7219Mode.Display)
+            : this(spiBus, device.CreateDigitalOutputPort(chipSelectPin), deviceCount, 1, maxMode)
         { }
-
-        
 
         /// <summary>
         /// Standard initialization routine.
         /// </summary>
-        void Initialize(Max7219Type maxMode)
+        void Initialize(Max7219Mode maxMode)
         {
-            SetRegister(Register.DecodeMode, (byte)((maxMode == Max7219Type.Character)? 0xFF:0)); // use matrix(0) or digits
+            SetRegister(Register.DecodeMode, (byte)((maxMode == Max7219Mode.Character)? 0xFF:0)); // use matrix(0) or digits
             SetRegister(Register.ScanLimit, 7); //show all 8 digits
             SetRegister(Register.DisplayTest, 0); // no display test
             SetRegister(Register.ShutDown, 1); // not shutdown mode
@@ -162,6 +127,12 @@ namespace Meadow.Foundation.Displays
             Clear();
         }
 
+        /// <summary>
+        /// Set number to display (left aligned)
+        /// </summary>
+        /// <param name="value">the number to display</param>
+        /// <param name="deviceId">the cascaded device id</param>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
         public void SetNumber(int value, int deviceId = 0)
         {
             //12345678
@@ -182,6 +153,13 @@ namespace Meadow.Foundation.Displays
             }
         }
 
+        /// <summary>
+        /// Set a single character
+        /// </summary>
+        /// <param name="character">the chracter to display</param>
+        /// <param name="digit">the digit index starting from the left</param>
+        /// <param name="showDecimal">show the decimal with the character</param>
+        /// <param name="deviceId">the cascaded device id</param>
         public void SetCharacter(CharacterType character, int digit, bool showDecimal = false, int deviceId = 0)
         {
             ValidatePosition(deviceId, digit);
@@ -190,24 +168,38 @@ namespace Meadow.Foundation.Displays
             buffer[deviceId, digit] = data;
         }
 
+        /// <summary>
+        /// Get the stored character 
+        /// </summary>
+        /// <param name="digit">the digit index of the character</param>
+        /// <param name="deviceId">the cascaded device id</param>
+        /// <returns></returns>
         public CharacterType GetCharacter(int digit, int deviceId = 0)
         {
             ValidatePosition(deviceId, digit);
             return (CharacterType)buffer[deviceId, digit];
         }
 
-        public void TestDisplay(int timeInMs = 1000)
+        /// <summary>
+        /// Helper test method - will turn all leds on then off
+        /// </summary>
+        /// <param name="time">time to show leds</param>
+        public void TestDisplay(TimeSpan time)
         {
             SetRegister(Register.DisplayTest, 0xFF);
 
-            Thread.Sleep(timeInMs);
+            Thread.Sleep((int)time.TotalMilliseconds);
 
             SetRegister(Register.DisplayTest, 0); 
         }
 
-        public void SetMode(Max7219Type maxMode)
+        /// <summary>
+        /// Set the display mode of the max7219
+        /// </summary>
+        /// <param name="maxMode">the mode</param>
+        public void SetMode(Max7219Mode maxMode)
         {
-            SetRegister(Register.DecodeMode, (byte)((maxMode == Max7219Type.Character) ? 0xFF : 0)); // use matrix(0) or digits
+            SetRegister(Register.DecodeMode, (byte)((maxMode == Max7219Mode.Character) ? 0xFF : 0)); // use matrix(0) or digits
         }
 
         /// <summary>
@@ -222,7 +214,7 @@ namespace Meadow.Foundation.Displays
                 writeBuffer[i++] = (byte)register;
                 writeBuffer[i++] = data;
             }
-            max7219.WriteBytes(writeBuffer);
+            max7219.Write(writeBuffer);
         }
 
         /// <summary>
@@ -235,7 +227,7 @@ namespace Meadow.Foundation.Displays
             writeBuffer[deviceId * 2] = (byte)register;
             writeBuffer[deviceId * 2 + 1] = data;
 
-            max7219.WriteBytes(writeBuffer);
+            max7219.Write(writeBuffer);
         }
 
         /// <summary>
@@ -271,13 +263,24 @@ namespace Meadow.Foundation.Displays
             SetRegister(Register.Intensity, (byte)intensity);
         }
 
+        /// <summary>
+        /// Set a number at a specific position
+        /// </summary>
+        /// <param name="value">the value to display</param>
+        /// <param name="digit">the digit index</param>
+        /// <param name="deviceId">the cascaded device id</param>
         public void SetDigit(byte value, int digit, int deviceId = 0)
         {
             ValidatePosition(deviceId, digit);
             buffer[deviceId, digit] = value;
         }
 
-        public byte GetDigit(int digit, int deviceId = 0)
+        /// <summary>
+        /// Get the number at a specific position
+        /// </summary>
+        /// <param name="digit">the digit index</param>
+        /// <param name="deviceId">the cascaded device id</param>
+        public int GetDigit(int digit, int deviceId = 0)
         {
             ValidatePosition(deviceId, digit);
             return buffer[deviceId, digit];
@@ -289,7 +292,7 @@ namespace Meadow.Foundation.Displays
             {
                 throw new ArgumentOutOfRangeException(nameof(deviceId), $"Invalid device Id: {deviceId}");
             }
-            if (digit < 0 || digit >= NumDigits)
+            if (digit < 0 || digit >= DigitsPerDevice)
             {
                 throw new ArgumentOutOfRangeException(nameof(digit), $"Invalid digit: {digit}");
             }
@@ -298,7 +301,7 @@ namespace Meadow.Foundation.Displays
         /// <summary>
         /// Writes all the Values to the devices.
         /// </summary>
-        public override void Show()
+        public void Show()
         {
             WriteBuffer(buffer);
         }
@@ -308,39 +311,16 @@ namespace Meadow.Foundation.Displays
         /// </summary>
         public void WriteBuffer(byte[,] buffer)
         {
-            ValidateBuffer(buffer);
-
-            for (int digit = 0; digit < NumDigits; digit++)
+            for (int digit = 0; digit < DigitsPerDevice; digit++)
             {
                 var i = 0;
 
-                for (var deviceId = DeviceCount - 1; deviceId >= 0; deviceId--)
+                for (int deviceId = DeviceCount - 1; deviceId >= 0; deviceId--)
                 {
                     writeBuffer[i++] = (byte)((int)Register.Digit0 + digit);
                     writeBuffer[i++] = buffer[deviceId, digit];
                 }
-                //max7219.WriteBytes(_writeBuffer);
-                spi.ExchangeData(chipSelectPort, ChipSelectMode.ActiveLow, writeBuffer, readBuffer);
-            }
-        }
-
-        /// <summary>
-        /// Validates the buffer dimensions.
-        /// </summary>
-        /// <param name="buffer"></param>
-        private void ValidateBuffer(byte[,] buffer)
-        {
-            if (buffer.Rank != 2)
-            {
-                throw new ArgumentException(nameof(buffer), $"buffer must be two dimensional.");
-            }
-            if (buffer.GetUpperBound(0) != DeviceCount - 1)
-            {
-                throw new ArgumentException(nameof(buffer), $"buffer upper bound ({buffer.GetUpperBound(0)}) for dimension 0 must be {DeviceCount - 1}.");
-            }
-            if (buffer.GetUpperBound(1) != NumDigits - 1)
-            {
-                throw new ArgumentException(nameof(buffer), $"buffer upper bound ({buffer.GetUpperBound(1)}) for dimension 1 must be {NumDigits - 1}.");
+                max7219.Write(writeBuffer);
             }
         }
 
@@ -361,76 +341,11 @@ namespace Meadow.Foundation.Displays
 
             for (int deviceId = start; deviceId < end; deviceId++)
             {
-                for (int digit = 0; digit < NumDigits; digit++)
+                for (int digit = 0; digit < DigitsPerDevice; digit++)
                 {
                     SetDigit(0, digit, deviceId);
                 }
             }
-        }
-
-        /// <summary>
-        /// Clears the buffer from the given start to end and flushes
-        /// </summary>
-        public override void Clear(bool updateDisplay = false)
-        {
-            Clear(0, DeviceCount);
-
-            if(updateDisplay)
-            {
-                Show();
-            }
-        }
-
-        public override void DrawPixel(int x, int y, Color color)
-        {
-            DrawPixel(x, y, color != Color.Black);
-        }
-
-        public override void DrawPixel(int x, int y, bool colored)
-        {
-            var index = x % 8;
-
-            var display = y / 8 + (x / 8) * DeviceRows;
-
-            if(display > DeviceCount)
-            {
-                Console.WriteLine($"Display out of range {x}, {y}");
-                return;
-            }
-
-            if (colored)
-            {
-                buffer[display, index] = (byte)(buffer[display, index] | (byte)(1 << (y % 8)));
-            }
-            else
-            {
-                buffer[display, index] = (byte)(buffer[display, index] & ~(byte)(1 << (y % 8)));
-            }
-        }
-
-        public override void DrawPixel(int x, int y)
-        {
-            DrawPixel(x, y, currentPen);
-        }
-
-        public override void SetPenColor(Color pen)
-        {
-            currentPen = pen;
-        }
-
-        public override void InvertPixel(int x, int y)
-        {
-            var index = x % 8;
-
-            var display = y / 8 + (x / 8) * DeviceRows;
-
-            if (display > DeviceCount)
-            {
-                Console.WriteLine($"Display out of range {x}, {y}");
-                return;
-            }
-
-            buffer[display, index] = (byte)(buffer[display, index] ^= (byte)(1 << y % 8));
         }
     }
 }

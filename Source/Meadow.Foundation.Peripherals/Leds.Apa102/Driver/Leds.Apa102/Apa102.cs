@@ -1,4 +1,6 @@
-﻿using Meadow.Hardware;
+﻿using Meadow.Devices;
+using Meadow.Hardware;
+using Meadow.Units;
 using System;
 
 namespace Meadow.Foundation.Leds
@@ -9,17 +11,14 @@ namespace Meadow.Foundation.Leds
     /// <remarks>Based on logic from https://github.com/adafruit/Adafruit_CircuitPython_DotStar/blob/master/adafruit_dotstar.py </remarks>
     public partial class Apa102
     {
-        //ToDo this could probably move into Meadow.Foundation.Core
-        public enum PixelOrder
-        {
-            RGB,
-            RBG,
-            GRB,
-            GBR,
-            BRG,
-            BGR
-        }
+        /// <summary>
+        /// Default SPI bus speed
+        /// </summary>
+        public static Frequency DefaultSpiBusSpeed = new Frequency(6000, Frequency.UnitType.Kilohertz);
 
+        /// <summary>
+        /// SpiPeripheral object
+        /// </summary>
         protected ISpiPeripheral spiPeripheral;
 
         const short StartHeaderSize = 4;
@@ -37,8 +36,15 @@ namespace Meadow.Foundation.Leds
         readonly byte[] buffer;
         readonly int endHeaderIndex;
         readonly byte[] pixelOrder;
+
+        /// <summary>
+        /// Total number of leds 
+        /// </summary>
         public int NumberOfLeds => numberOfLeds;
 
+        /// <summary>
+        /// Brightness 
+        /// </summary>
         public float Brightness 
         { 
             get => brightness;
@@ -49,23 +55,34 @@ namespace Meadow.Foundation.Leds
                 else { brightness = value; }
             } 
         }
-
-        public bool AutoWrite { get; set; }
-
         float brightness;
 
-        /// <param name="spiBus">The SPI bus</param>
-        /// <param name="chipSelect">THe SPI chip select pin. Not used but need for creating the  SPI Peripheral</param>
-        /// <param name="numberOfLeds">The number of APA102 LEDs to control</param>
-        /// <param name="pixelOrder">Set the pixel order on the LEDs - different strips implement this differently</param>
-        /// <param name="autoWrite">Transmit any LED changes right away</param>
-        public Apa102(ISpiBus spiBus, int numberOfLeds, PixelOrder pixelOrder = PixelOrder.BGR, bool autoWrite = false)
+        /// <summary>
+        /// Creates a new APA102 object
+        /// </summary>
+        /// <param name="device">IMeadowDevice</param>
+        /// <param name="spiBus">SPI bus</param>
+        /// <param name="chipSelectPin">Chip select pin</param>
+        /// <param name="numberOfLeds">Number of leds</param>
+        /// <param name="pixelOrder">Pixel color order</param>
+        public Apa102(IMeadowDevice device, ISpiBus spiBus, IPin chipSelectPin, int numberOfLeds, PixelOrder pixelOrder = PixelOrder.BGR)
+        : this(spiBus, numberOfLeds, pixelOrder, device.CreateDigitalOutputPort(chipSelectPin))
         {
-            spiPeripheral = new SpiPeripheral(spiBus, null);
+        }
+
+        /// <summary>
+        /// Creates a new APA102 object
+        /// </summary>
+        /// <param name="spiBus">SPI bus</param>
+        /// <param name="numberOfLeds">Number of leds</param>
+        /// <param name="pixelOrder">Pixel color order</param>
+        /// <param name="chipSelectPort">SPI chip select port (optional)</param>
+        public Apa102(ISpiBus spiBus, int numberOfLeds, PixelOrder pixelOrder = PixelOrder.BGR, IDigitalOutputPort chipSelectPort = null)
+        {
+            spiPeripheral = new SpiPeripheral(spiBus, chipSelectPort);
             this.numberOfLeds = numberOfLeds;
             endHeaderSize = this.numberOfLeds / 16;
             Brightness = 1.0f;
-            AutoWrite = autoWrite;
 
             if (this.numberOfLeds % 16 != 0)
             {
@@ -73,7 +90,7 @@ namespace Meadow.Foundation.Leds
             }
 
             buffer = new byte[this.numberOfLeds * 4 + StartHeaderSize + endHeaderSize];
-            endHeaderIndex = (buffer.Length - endHeaderSize);
+            endHeaderIndex = buffer.Length - endHeaderSize;
 
             switch (pixelOrder)
             {
@@ -131,8 +148,7 @@ namespace Meadow.Foundation.Leds
         /// <param name="brightness">The brighrness 0.0 - 1.0f</param>
         public virtual void SetLed(int index, Color color, float brightness = 1f)
         {
-            byte[] bColor = new byte[] { (byte)(color.R * 255), (byte)(color.G * 255), (byte)(color.B * 255) };
-            SetLed(index, bColor, brightness);
+            SetLed(index, new byte[]{ color.R, color.G, color.B }, brightness);
         }
 
         /// <summary>
@@ -158,55 +174,50 @@ namespace Meadow.Foundation.Leds
                 throw new ArgumentOutOfRangeException("Index must be less than the number of leds specified");
             }
 
-            if (brightness < 0 || brightness > 1f)
-            {
-                throw new ArgumentOutOfRangeException("brightness must be between 0.0 and 1.0");
-            }
+            // clamp
+            if(brightness>1) { brightness = 1; }
+            if(brightness<0) { brightness = 0; }
 
             var offset = index * 4 + StartHeaderSize;
-            //var rgb = value;
-            byte brightnessByte;
 
-            //rgb[0] = value[0];
-            //rgb[1] = value[1];
-            //rgb[2] = value[2];
-
-            brightnessByte = (byte)(32 - (32 - (int)(brightness * 31)) & 0b00011111);
+            byte brightnessByte = (byte)(32 - (32 - (int)(brightness * 31)) & 0b00011111);
             buffer[offset] = (byte)(brightnessByte | LedStart);
             buffer[offset + 1] = rgb[pixelOrder[0]];
             buffer[offset + 2] = rgb[pixelOrder[1]];
             buffer[offset + 3] = rgb[pixelOrder[2]];
-
-            if (AutoWrite)
-            {
-                Show();
-            }
         }
 
         /// <summary>
         /// Turn off all the Leds
         /// </summary>
-        public override void Clear(bool autoWrite = false)
+        public void Clear(bool update = false)
         {
             byte[] off = {0, 0, 0};
 
-            for(int i=0; i< NumberOfLeds; i++)
+            for(int i = 0; i < NumberOfLeds; i++)
             {
                 SetLed(i, off);
-            }
-
-            if (!AutoWrite && autoWrite)
-            {
-                Show();
             }
         }
 
         /// <summary>
         /// Transmit the changes to the LEDs 
         /// </summary>
-        public override void Show()
+        public void Show()
         {
-            spiPeripheral.WriteBytes(buffer);
+            spiPeripheral.Write(buffer);
+        }
+
+        /// <summary>
+        /// Update APA102 with data in display buffer
+        /// </summary>
+        /// <param name="left">left</param>
+        /// <param name="top">top</param>
+        /// <param name="right">right</param>
+        /// <param name="bottom">bottom</param>
+        public void Show(int left, int top, int right, int bottom)
+        {
+            Show();
         }
     }
 }

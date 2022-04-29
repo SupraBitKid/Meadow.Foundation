@@ -13,8 +13,6 @@ namespace Meadow.Foundation.Sensors.Switches
     /// </summary>
     public class DipSwitch
     {
-        #region Properties
-
         /// <summary>
         /// Returns the ISwitch at the specified index.
         /// </summary>
@@ -25,16 +23,12 @@ namespace Meadow.Foundation.Sensors.Switches
         /// <summary>
         /// Returns the switch array.
         /// </summary>
-        public ISwitch[] Switches = null;
+        public ISwitch[] Switches { get; }
 
         /// <summary>
         /// Raised when one of the switches is switched on or off.
         /// </summary>
         public event ArrayEventHandler Changed = delegate { };
-
-        #endregion
-
-        #region Constructors
 
         /// <summary>
         /// Creates a new DipSwitch connected to the specified switchPins, with the InterruptMode and ResisterMode specified by the type parameters.
@@ -45,7 +39,7 @@ namespace Meadow.Foundation.Sensors.Switches
         /// <param name="resistorMode"></param>
         /// <param name="debounceDuration"></param>
         /// <param name="glitchFilterCycleCount"></param>
-        public DipSwitch(IIODevice device, IPin[] switchPins, InterruptMode interruptMode, ResistorMode resistorMode, int debounceDuration = 20, int glitchFilterCycleCount = 0)
+        public DipSwitch(IDigitalInputController device, IPin[] switchPins, InterruptMode interruptMode, ResistorMode resistorMode, int debounceDuration = 20, int glitchFilterCycleCount = 0)
         {
             Switches = new ISwitch[switchPins.Length];
 
@@ -73,10 +67,6 @@ namespace Meadow.Foundation.Sensors.Switches
             }
         }
 
-        #endregion
-
-        #region Methods
-
         /// <summary>
         /// Event handler when switch value has been changed
         /// </summary>
@@ -86,7 +76,5 @@ namespace Meadow.Foundation.Sensors.Switches
             Console.WriteLine($"HandleSwitchChange: {switchNumber} total switches: {Switches.Length}");
             Changed(this, new ArrayEventArgs(switchNumber, Switches[switchNumber]));
         }
-
-        #endregion
     }
 }

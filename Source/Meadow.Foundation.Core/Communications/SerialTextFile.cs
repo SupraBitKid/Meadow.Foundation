@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Drawing.Text;
 using System.Threading;
+using Meadow.Devices;
 using Meadow.Hardware;
 
 namespace Meadow.Foundation.Communications
@@ -56,7 +56,7 @@ namespace Meadow.Foundation.Communications
         /// <summary>
         ///     A complete line of text has been read, send this to the event subscriber.
         /// </summary>
-        public event LineReceived OnLineReceived;
+        public event LineReceived OnLineReceived = delegate {};
 
         #endregion Events and delegates
 
@@ -66,20 +66,23 @@ namespace Meadow.Foundation.Communications
         ///     Default constructor for the SerialTextFile class, made private to prevent the
         ///     programmer from using this method of construcing an object.
         /// </summary>
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private SerialTextFile()
         {
         }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         /// <summary>
         ///     Create a new SerialTextFile and attach the instance to the specfied serial port.
         /// </summary>
+        /// <param name="device">ISerialController used to instantiate serial port.</param>
         /// <param name="port">Serial port name.</param>
         /// <param name="baudRate">Baud rate.</param>
         /// <param name="parity">Parity.</param>
         /// <param name="dataBits">Data bits.</param>
         /// <param name="stopBits">Stop bits.</param>
         /// <param name="endOfLine">Text indicating the end of a line of text.</param>
-        public SerialTextFile(IIODevice device, SerialPortName port, int baudRate, Parity parity, int dataBits, StopBits stopBits,
+        public SerialTextFile(ISerialController device, SerialPortName port, int baudRate, Parity parity, int dataBits, StopBits stopBits,
             string endOfLine)
         {
             serialPort = device.CreateSerialPort(port, baudRate, dataBits, parity, stopBits);
@@ -92,6 +95,7 @@ namespace Meadow.Foundation.Communications
         /// </summary>
         /// <param name="serialPort">Serial port object.</param>
         /// <param name="endOfLine">Text indicating the end of a line of text.</param>
+        /// <param name="useSerialEvents">Enable data received events</param>
         public SerialTextFile(ISerialPort serialPort, string endOfLine, bool useSerialEvents = true)
         {
             this.serialPort = serialPort;

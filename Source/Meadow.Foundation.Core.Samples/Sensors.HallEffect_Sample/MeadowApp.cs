@@ -6,7 +6,7 @@ using System;
 
 namespace Sensors.HallEffect_Sample
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7MicroV2, MeadowApp>
     {
         LinearHallEffectTachometer hallSensor;
 
@@ -24,7 +24,7 @@ namespace Sensors.HallEffect_Sample
             Console.WriteLine("done");
         }
 
-        void HallSensorRPMsChanged(object sender, FloatChangeResult e)
+        void HallSensorRPMsChanged(object sender, ChangeResult<float> e)
         {
             Console.WriteLine($"RPM: {e.New}");
         }

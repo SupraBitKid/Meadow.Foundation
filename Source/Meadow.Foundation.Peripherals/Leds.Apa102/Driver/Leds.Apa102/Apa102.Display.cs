@@ -1,28 +1,69 @@
-﻿using Meadow.Foundation.Displays;
+﻿using Meadow.Devices;
+using Meadow.Foundation.Graphics;
+using Meadow.Foundation.Graphics.Buffers;
 using Meadow.Hardware;
 
 namespace Meadow.Foundation.Leds
 {
-    public partial class Apa102 : DisplayBase
+    public partial class Apa102 : IGraphicsDisplay
     {
-        public override DisplayColorMode ColorMode => DisplayColorMode.Format24bppRgb888;
+        /// <summary>
+        /// Color mode of leds - 24bpp
+        /// </summary>
+        public ColorType ColorMode => ColorType.Format24bppRgb888;
 
-        public override int Width => width;
-        int width;
+        /// <summary>
+        /// Width of pixel array 
+        /// </summary>
+        public int Width => width;
+        readonly int width;
 
-        public override int Height => height;
-        int height;
+        /// <summary>
+        /// Height of pixel array
+        /// </summary>
+        public int Height => height;
+        readonly int height;
 
-        Color pen = Color.White;
+        /// <summary>
+        /// Ignore out of bounds pixels
+        /// </summary>
+        public bool IgnoreOutOfBoundsPixels { get; set; }
 
+        /// <summary>
+        /// Creates a new APA102 object
+        /// </summary>
+        /// <param name="spiBus">SPI bus</param>
+        /// <param name="width">Width of led array</param>
+        /// <param name="height">Height of led array</param>
+        /// <param name="pixelOrder">Pixel color order</param>
+        /// <param name="chipSelectPort">SPI chip select port (optional)</param>
         public Apa102(ISpiBus spiBus,
+                     int width,
+                     int height,
                      PixelOrder pixelOrder = PixelOrder.BGR,
-                     bool autoWrite = false,
-                     int width = 1,
-                     int height = 1) : this(spiBus, width * height, pixelOrder, autoWrite)
+                     IDigitalOutputPort chipSelectPort = null) : this(spiBus, width * height, pixelOrder, chipSelectPort)
         {
             this.width = width;
             this.height = height;
+        }
+
+        /// <summary>
+        /// Creates a new APA102 object
+        /// </summary>
+        /// <param name="device">IMeadowDevice</param>
+        /// <param name="spiBus">SPI bus</param>
+        /// <param name="chipSelectPin">Chip select pin</param>
+        /// <param name="width">Width of led array</param>
+        /// <param name="height">Height of led array</param>
+        /// <param name="pixelOrder">Pixel color order</param>
+        public Apa102(IMeadowDevice device, 
+                    ISpiBus spiBus,
+                    IPin chipSelectPin,
+                    int width,
+                    int height, 
+                    PixelOrder pixelOrder = PixelOrder.BGR)
+        : this(spiBus, width, height, pixelOrder, device.CreateDigitalOutputPort(chipSelectPin))
+        {
         }
 
         private int GetIndexForCoordinate(int x, int y)
@@ -41,26 +82,48 @@ namespace Meadow.Foundation.Leds
             return index;
         }
 
-        public override void DrawPixel(int x, int y, Color color)
+        /// <summary>
+        /// Draw pixel at location
+        /// </summary>
+        /// <param name="x">x position of pixel</param>
+        /// <param name="y">y position of pixel</param>
+        /// <param name="color">color of pixel</param>
+        public void DrawPixel(int x, int y, Color color)
         {
-            pen = color;
+            if(IgnoreOutOfBoundsPixels)
+            {
+                if(x < 0 || x >= Width || y < 0 || y >= Height)
+                { return; }
+            }
 
             SetLed(GetIndexForCoordinate(x, y), color);
     
         }
 
-        public override void DrawPixel(int x, int y, bool colored)
+        /// <summary>
+        /// Draw pixel at location
+        /// </summary>
+        /// <param name="x">x position of pixel</param>
+        /// <param name="y">y position of pixel</param>
+        /// <param name="colored">if true draw white, if false draw black</param>
+        public void DrawPixel(int x, int y, bool colored)
         {
             DrawPixel(0, 0, colored ? Color.White : Color.Black);
         }
 
-        public override void DrawPixel(int x, int y)
+        /// <summary>
+        /// Invert pixel at location
+        /// </summary>
+        /// <param name="x">x position of pixel</param>
+        /// <param name="y">y position of pixel</param>
+        public void InvertPixel(int x, int y)
         {
-            DrawPixel(x, y, pen);
-        }
+            if (IgnoreOutOfBoundsPixels)
+            {
+                if (x < 0 || x >= Width || y < 0 || y >= Height)
+                { return; }
+            }
 
-        public override void InvertPixel(int x, int y)
-        {
             var index = 3 * GetIndexForCoordinate(x, y);
 
             buffer[index] ^= 0xFF;
@@ -68,9 +131,60 @@ namespace Meadow.Foundation.Leds
             buffer[index + 2] ^= 0xFF;
         }
 
-        public override void SetPenColor(Color pen)
+        /// <summary>
+        /// Fill the entire display buffer with a color
+        /// </summary>
+        /// <param name="clearColor">color to fill</param>
+        /// <param name="updateDisplay">update after fill</param>
+        public void Fill(Color clearColor, bool updateDisplay = false)
         {
-            this.pen = pen;
+            byte[] color = { clearColor.R, clearColor.G, clearColor.B };
+
+            for (int i = 0; i < NumberOfLeds; i++)
+            {
+                SetLed(i, color);
+            }
+
+            if (updateDisplay)
+            {
+                Show();
+            }
+        }
+
+        /// <summary>
+        /// Fill a color in the specified region
+        /// </summary>
+        /// <param name="x">x position</param>
+        /// <param name="y">y position</param>
+        /// <param name="width">width to fill</param>
+        /// <param name="height">height to fill</param>
+        /// <param name="fillColor">color to fill</param>
+        public void Fill(int x, int y, int width, int height, Color fillColor)
+        {
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    DrawPixel(i, j, fillColor);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Draw a buffer at the specified location
+        /// </summary>
+        /// <param name="x">x position</param>
+        /// <param name="y">y position</param>
+        /// <param name="displayBuffer">buffer to draw</param>
+        public void DrawBuffer(int x, int y, IDisplayBuffer displayBuffer)
+        {
+            for (int i = 0; i < displayBuffer.Width; i++)
+            {
+                for (int j = 0; j < displayBuffer.Height; j++)
+                {
+                    DrawPixel(x + i, j + y, displayBuffer.GetPixel(i, j));
+                }
+            }
         }
     }
 }

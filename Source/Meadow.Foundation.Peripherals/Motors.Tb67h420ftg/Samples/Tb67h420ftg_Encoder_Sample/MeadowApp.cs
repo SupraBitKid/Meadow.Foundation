@@ -1,24 +1,21 @@
-﻿using System;
-using System.Threading;
-using Meadow;
+﻿using Meadow;
 using Meadow.Devices;
-using Meadow.Foundation;
-using Meadow.Foundation.Displays;
+using Meadow.Foundation.Displays.Ssd130x;
 using Meadow.Foundation.Graphics;
-using Meadow.Foundation.Leds;
 using Meadow.Foundation.Motors;
 using Meadow.Foundation.Sensors.Buttons;
 using Meadow.Foundation.Sensors.Rotary;
 using Meadow.Hardware;
+using System;
 
 namespace MeadowApp
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7MicroV2, MeadowApp>
     {
         //RgbPwmLed onboardLed;
         Tb67h420ftg motorDriver;
         RotaryEncoder encoder;
-        GraphicsLibrary display;
+        MicroGraphics display;
 
         PushButton button1;
         PushButton button2;
@@ -63,7 +60,7 @@ namespace MeadowApp
 
             Console.WriteLine("Init display");
             var ssd1306 = new Ssd1306(Device.CreateI2cBus(), 60, Ssd1306.DisplayType.OLED128x32);
-            display = new GraphicsLibrary(ssd1306);
+            display = new MicroGraphics(ssd1306);
             display.CurrentFont = new Font8x12();
 
             Console.WriteLine("Initialization complete.");
@@ -72,9 +69,9 @@ namespace MeadowApp
 
         int forwardCount = 0;
         int backwardsCount = 0;
-        private void Encoder_Rotated(object sender, Meadow.Peripherals.Sensors.Rotary.RotaryTurnedEventArgs e)
+        private void Encoder_Rotated(object sender, Meadow.Peripherals.Sensors.Rotary.RotaryChangeResult e)
         {
-            if(e.Direction == Meadow.Peripherals.Sensors.Rotary.RotationDirection.Clockwise)
+            if(e.New == Meadow.Peripherals.Sensors.Rotary.RotationDirection.Clockwise)
             {
                 forwardCount++;
             }
@@ -105,7 +102,7 @@ namespace MeadowApp
             pressed = DateTime.Now.Ticks;
 
             Console.WriteLine("Motor 1 start.");
-            motorDriver.Motor1.Speed = 1f;
+            motorDriver.Motor1.Power = 1f;
         }
         private void Button1_PressEnded(object sender, EventArgs e)
         {
@@ -114,18 +111,18 @@ namespace MeadowApp
           //  UpdateDisplay($"CW: {forwardCount}, CCW {backwardsCount}", $"Events/s {eventsPerSec}");
 
             Console.WriteLine("Motor 1 stop.");
-            motorDriver.Motor1.Speed = 0f;
+            motorDriver.Motor1.Power = 0f;
         }
 
         private void Button2_PressStarted(object sender, EventArgs e)
         {
             Console.WriteLine("Motor 2 start.");
-            motorDriver.Motor2.Speed = 0.5f;
+            motorDriver.Motor2.Power = 0.5f;
         }
         private void Button2_PressEnded(object sender, EventArgs e)
         {
             Console.WriteLine("Motor 2 stop.");
-            motorDriver.Motor2.Speed = 0f;
+            motorDriver.Motor2.Power = 0f;
         }
     }
 }

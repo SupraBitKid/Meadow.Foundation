@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace Sensors.Buttons.PushButton_Sample
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7MicroV2, MeadowApp>
     {
         RgbPwmLed led;
         List<PushButton> pushButtons;
@@ -19,8 +19,8 @@ namespace Sensors.Buttons.PushButton_Sample
         {
             Console.WriteLine("Initializing...");
 
-            TestAllResistorTypes();
-            //TestMultiplePorts();
+            //TestAllResistorTypes();
+            TestMultiplePorts();
 
             Console.WriteLine("PushButton(s) ready!!!");
         }
@@ -37,7 +37,7 @@ namespace Sensors.Buttons.PushButton_Sample
             pushButtons = new List<PushButton>();
 
             var inputInternalPullUp = Device.CreateDigitalInputPort(
-                Device.Pins.MOSI,
+                Device.Pins.MISO,
                 InterruptMode.EdgeBoth,
                 ResistorMode.InternalPullUp, 20);
             var buttonInternalPullUp = new PushButton(inputInternalPullUp);
@@ -90,10 +90,12 @@ namespace Sensors.Buttons.PushButton_Sample
 
             foreach (var pushButton in pushButtons)
             {
+                pushButton.LongClickedThreshold = new TimeSpan(0,0,1);
+
                 pushButton.Clicked += PushButtonClicked;
                 pushButton.PressStarted += PushButtonPressStarted;
                 pushButton.PressEnded += PushButtonPressEnded;
-                pushButton.LongPressClicked += PushButtonLongPressClicked;
+                pushButton.LongClicked += PushButtonLongClicked;
             }
 
             led.SetColor(Color.Green);
@@ -101,12 +103,12 @@ namespace Sensors.Buttons.PushButton_Sample
 
         void TestMultiplePorts() 
         {
-            led = new RgbPwmLed(
-                Device, 
-                Device.Pins.OnboardLedRed, 
-                Device.Pins.OnboardLedGreen, 
-                Device.Pins.OnboardLedBlue);
-            led.SetColor(Color.Red);
+            //led = new RgbPwmLed(
+            //    Device, 
+            //    Device.Pins.OnboardLedRed, 
+            //    Device.Pins.OnboardLedGreen, 
+            //    Device.Pins.OnboardLedBlue);
+            //led.SetColor(Color.Red);
 
             // Important note: You can only use on Push Button per Group Set (GSXX)
             pushButtons = new List<PushButton>
@@ -124,7 +126,7 @@ namespace Sensors.Buttons.PushButton_Sample
                 new PushButton(Device, Device.Pins.A00),         // <- GS04
 
                 //new PushButton(Device, Device.Pins.A01),         // <- GS05
-                new PushButton(Device, Device.Pins.MOSI),        // <- GS05
+                new PushButton(Device, Device.Pins.COPI),        // <- GS05
 
                 new PushButton(Device, Device.Pins.D02),         // <- GS06
                 //new PushButton(Device, Device.Pins.D08),         // <- GS06
@@ -136,11 +138,15 @@ namespace Sensors.Buttons.PushButton_Sample
                 new PushButton(Device, Device.Pins.D03),         // <- GS08
 
                 new PushButton(Device, Device.Pins.D00),         // <- GS09
-                //new PushButton(Device, Device.Pins.D04),         // <- GS09
-                //new PushButton(Device, Device.Pins.D11),         // <- GS09               
+                //new PushButton(Device, Device.Pins.D04),         // <- GS09         
                 
-                new PushButton(Device, Device.Pins.MISO),        // <- GS11
+                new PushButton(Device, Device.Pins.SCK),         // <- GS10
+                //new PushButton(Device, Device.Pins.D10),         // <- GS10
+
+                new PushButton(Device, Device.Pins.CIPO),        // <- GS11
                 
+                new PushButton(Device, Device.Pins.D01),         // <- GS13
+
                 new PushButton(Device, Device.Pins.D12),         // <- GS14
 
                 new PushButton(Device, Device.Pins.D13),         // <- GS15
@@ -149,12 +155,12 @@ namespace Sensors.Buttons.PushButton_Sample
             foreach (var pushButton in pushButtons)
             {
                 pushButton.Clicked += PushButtonClicked;
-                pushButton.PressStarted += PushButtonPressStarted;
-                pushButton.PressEnded += PushButtonPressEnded;
-                pushButton.LongPressClicked += PushButtonLongPressClicked;
+                //pushButton.PressStarted += PushButtonPressStarted;
+                //pushButton.PressEnded += PushButtonPressEnded;
+                //pushButton.LongClicked += PushButtonLongClicked;
             }
 
-            led.SetColor(Color.Green);
+            //led.SetColor(Color.Green);
         }
 
         void PushButtonClicked(object sender, EventArgs e)
@@ -177,9 +183,9 @@ namespace Sensors.Buttons.PushButton_Sample
             led.SetColor(Color.Green);
         }
 
-        void PushButtonLongPressClicked(object sender, EventArgs e)
+        void PushButtonLongClicked(object sender, EventArgs e)
         {
-            Console.WriteLine($"PushButton Clicked!");
+            Console.WriteLine($"PushButton LongClicked!");
             led.SetColor(Color.Blue);
             Thread.Sleep(500);
             led.SetColor(Color.Green);

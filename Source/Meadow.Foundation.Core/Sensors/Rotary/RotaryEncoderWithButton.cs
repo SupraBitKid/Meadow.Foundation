@@ -13,13 +13,12 @@ namespace Meadow.Foundation.Sensors.Rotary
         /// <summary>
         /// Returns the PushButton that represents the integrated button.
         /// </summary>
-        public PushButton Button => _button;
-        readonly PushButton _button;
+        public PushButton Button { get; private set; }
 
         /// <summary>
         /// Returns the push button's state
         /// </summary>
-        public bool State => _button.State;
+        public bool State => Button.State;
 
         /// <summary>
         /// Raised when the button circuit is re-opened after it has been closed (at the end of a �press�.
@@ -39,31 +38,46 @@ namespace Meadow.Foundation.Sensors.Rotary
         /// <summary>
         /// Instantiates a new RotaryEncoder on the specified pins that has an integrated button.
         /// </summary>
+        /// <param name="device"></param>
         /// <param name="aPhasePin"></param>
         /// <param name="bPhasePin"></param>
         /// <param name="buttonPin"></param>
-        /// <param name="resistor"></param>
-        /// <param name="debounceDuration"></param>
-        public RotaryEncoderWithButton(IIODevice device, IPin aPhasePin, IPin bPhasePin, IPin buttonPin, ResistorMode buttonResistorMode = ResistorMode.InternalPullDown)
+        /// <param name="buttonResistorMode"></param>
+        public RotaryEncoderWithButton(IDigitalInputController device, IPin aPhasePin, IPin bPhasePin, IPin buttonPin, ResistorMode buttonResistorMode = ResistorMode.InternalPullDown)
             : base(device, aPhasePin, bPhasePin)
         {
-            _button = new PushButton(device, buttonPin, buttonResistorMode);
+            Button = new PushButton(device, buttonPin, buttonResistorMode);
 
-            _button.Clicked += ButtonClicked;
-            _button.PressEnded += ButtonPressEnded;
-            _button.PressStarted += ButtonPressStarted;
+            Button.Clicked += ButtonClicked;
+            Button.PressEnded += ButtonPressEnded;
+            Button.PressStarted += ButtonPressStarted;
         }
 
+        /// <summary>
+        /// Method when button is clicked (down then up)
+        /// </summary>
+        /// <param name="sender">sender object</param>
+        /// <param name="e">event arguments</param>
         protected void ButtonClicked(object sender, EventArgs e)
         {
             Clicked(this, e);
         }
 
+        /// <summary>
+        /// Method called when button press is started (up state) 
+        /// </summary>
+        /// <param name="sender">sender object</param>
+        /// <param name="e">event arguments</param>
         protected void ButtonPressEnded(object sender, EventArgs e)
         {
             PressEnded(this, e);
         }
 
+        /// <summary>
+        /// Method called when button press is started (down state) 
+        /// </summary>
+        /// <param name="sender">sender object</param>
+        /// <param name="e">event arguments</param>
         protected void ButtonPressStarted(object sender, EventArgs e)
         {
             PressStarted(this, e);
