@@ -8,20 +8,29 @@ using Meadow.Foundation.Leds;
 
 namespace Leds.RgbPwmLed_Sample
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2, MeadowApp>
     {
+        //<!=SNIP=>
+
         List<RgbPwmLed> rgbPwmLeds;
 
         public MeadowApp()
         {
             Console.WriteLine("Initializing...");
 
+            var onRgbLed = new RgbLed(
+                device: Device,
+                redPin: Device.Pins.OnboardLedRed,
+                greenPin: Device.Pins.OnboardLedGreen,
+                bluePin: Device.Pins.OnboardLedBlue);
+            onRgbLed.SetColor(RgbLed.Colors.Red);
+
             rgbPwmLeds = new List<RgbPwmLed>()
             {
                 new RgbPwmLed(
-                    Device.CreatePwmPort(Device.Pins.D04),
+                    Device.CreatePwmPort(Device.Pins.D02),
                     Device.CreatePwmPort(Device.Pins.D03),
-                    Device.CreatePwmPort(Device.Pins.D02)),
+                    Device.CreatePwmPort(Device.Pins.D04)),
                 new RgbPwmLed(
                     Device.CreatePwmPort(Device.Pins.D05),
                     Device.CreatePwmPort(Device.Pins.D06),
@@ -36,6 +45,8 @@ namespace Leds.RgbPwmLed_Sample
                     Device.CreatePwmPort(Device.Pins.D13))
             };
 
+            onRgbLed.SetColor(RgbLed.Colors.Green);
+
             TestRgbPwmLed();
         }
 
@@ -45,13 +56,6 @@ namespace Leds.RgbPwmLed_Sample
 
             while (true)
             {
-                //for (int i = 0; i < (int)RgbLed.Colors.count; i++)
-                //{
-                //    rgbLed.SetColor((RgbLed.Colors)i);
-                //    Console.WriteLine(((RgbLed.Colors)i).ToString());
-                //    Thread.Sleep(1000);
-                //}
-
                 foreach (var rgbPwmLed in rgbPwmLeds)
                 {
                     rgbPwmLed.SetColor(Color.Red);
@@ -66,7 +70,6 @@ namespace Leds.RgbPwmLed_Sample
                     Console.WriteLine("Blue");
                     Thread.Sleep(1000);
 
-                    // Brightness
                     for (int i = 0; i < 10; i++)
                     {
                         rgbPwmLed.SetColor(Color.Red, i * 0.1f);
@@ -92,17 +95,17 @@ namespace Leds.RgbPwmLed_Sample
                     rgbPwmLed.Stop();
 
                     // Blink
-                    rgbPwmLed.StartBlink(Color.Red, 500, 500, 0.65f, 0.25f);
+                    rgbPwmLed.StartBlink(Color.Red, TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500), 1f, 0f);
                     Console.WriteLine("Blinking Red");
                     Thread.Sleep(3000);
                     rgbPwmLed.Stop();
 
-                    rgbPwmLed.StartBlink(Color.Green, 500, 500, 0.65f, 0.25f);
+                    rgbPwmLed.StartBlink(Color.Green, TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500), 1f, 0f);
                     Console.WriteLine("Blinking Green");
                     Thread.Sleep(3000);
                     rgbPwmLed.Stop();
 
-                    rgbPwmLed.StartBlink(Color.Blue, 500, 500, 0.65f, 0.25f);
+                    rgbPwmLed.StartBlink(Color.Blue, TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500), 1f, 0f);
                     Console.WriteLine("Blinking Blue");
                     Thread.Sleep(3000);
                     rgbPwmLed.Stop();
@@ -125,5 +128,7 @@ namespace Leds.RgbPwmLed_Sample
                 }
             }
         }
+
+        //<!=SNOP=>
     }
 }

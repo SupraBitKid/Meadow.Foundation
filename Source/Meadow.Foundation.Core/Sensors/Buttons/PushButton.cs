@@ -1,5 +1,4 @@
-﻿using Meadow.Devices;
-using Meadow.Hardware;
+﻿using Meadow.Hardware;
 using Meadow.Peripherals.Sensors.Buttons;
 using System;
 
@@ -10,6 +9,8 @@ namespace Meadow.Foundation.Sensors.Buttons
     /// </summary>
     public class PushButton : IButton, IDisposable
     {
+        private bool _shouldDisposeInput = false;
+
         /// <summary>
         /// This duration controls the debounce filter. It also has the effect
         /// of rate limiting clicks. Decrease this time to allow users to click
@@ -27,7 +28,7 @@ namespace Meadow.Foundation.Sensors.Buttons
         event EventHandler clickDelegate = delegate { };
         event EventHandler pressStartDelegate = delegate { };
         event EventHandler pressEndDelegate = delegate { };
-        event EventHandler longPressDelegate = delegate { };
+        event EventHandler longClickDelegate = delegate { };
 
         /// <summary>
         /// Returns the sanitized state of the switch. If the switch 
@@ -46,12 +47,12 @@ namespace Meadow.Foundation.Sensors.Buttons
         /// <summary>
         /// The minimum duration for a long press.
         /// </summary>
-        public TimeSpan LongPressThreshold { get; set; } = TimeSpan.Zero;
+        public TimeSpan LongClickedThreshold { get; set; } = TimeSpan.Zero;
 
         /// <summary>
         /// Returns digital input port.
         /// </summary>
-        public IDigitalInputPort DigitalIn { get; private set; }
+        protected IDigitalInputPort DigitalIn { get; set; }
 
         /// <summary>
         /// Raised when a press starts (the button is pushed down; circuit is closed).
@@ -107,7 +108,7 @@ namespace Meadow.Foundation.Sensors.Buttons
         /// <summary>
         /// Raised when the button circuit is pressed for at least 500ms.
         /// </summary>
-        public event EventHandler LongPressClicked
+        public event EventHandler LongClicked
         {
             add
             {
@@ -116,9 +117,9 @@ namespace Meadow.Foundation.Sensors.Buttons
                     throw new DeviceConfigurationException("LongPressClicked event requires InteruptMode to be anything but None");
                 }
 
-                longPressDelegate += value;
+                longClickDelegate += value;
             }
-            remove => longPressDelegate -= value;
+            remove => longClickDelegate -= value;
         }
 
         /// <summary>
@@ -137,52 +138,43 @@ namespace Meadow.Foundation.Sensors.Buttons
         protected ResistorMode resistorMode;
 
         /// <summary>
-        /// Creates PushButton with a digital input pin connected on a IIOdevice, especifying if its using an Internal or External PullUp/PullDown resistor.
+        /// Creates PushButton with a digital input pin connected on a IIOdevice, specifying if its using an Internal or External PullUp/PullDown resistor.
         /// </summary>
         /// <param name="device"></param>
         /// <param name="inputPin"></param>
         /// <param name="resistorMode"></param>
-        public PushButton(IDigitalInputController device, IPin inputPin, ResistorMode resistorMode = ResistorMode.InternalPullUp) 
-            : this(device.CreateDigitalInputPort(inputPin, InterruptMode.EdgeBoth, resistorMode, 50, 25)) { }
+        public PushButton(IDigitalInputController device, IPin inputPin, ResistorMode resistorMode = ResistorMode.InternalPullUp)
+            : this(device.CreateDigitalInputPort(inputPin, InterruptMode.EdgeBoth, resistorMode, 50, 25)) 
+        {
+            // only Dispose the input if we created it
+            _shouldDisposeInput = true;
+        }
 
         /// <summary>
-        /// Creates PushButton with a digital input port, especifying if its using an Internal or External PullUp/PullDown resistor.
+        /// Creates PushButton with a pre-configured interrupt port
         /// </summary>
         /// <param name="interruptPort"></param>
-        /// <param name="resistorMode"></param>
         public PushButton(IDigitalInputPort interruptPort)
         {
-            if (interruptPort.Resistor == ResistorMode.Disabled)
-            {
-                throw new Exception("PushButton requires ResistorMode to be != Disabled");
-            }
-
             resistorMode = interruptPort.Resistor;
 
-            DigitalIn = interruptPort;            
+            DigitalIn = interruptPort;
             DigitalIn.Changed += DigitalInChanged;
         }
 
         void DigitalInChanged(object sender, DigitalPortResult result)
         {
-            bool state = (resistorMode == ResistorMode.InternalPullUp || 
+            bool state = (resistorMode == ResistorMode.InternalPullUp ||
                           resistorMode == ResistorMode.ExternalPullUp) ? !result.New.State : result.New.State;
-
-            //Console.WriteLine($"PB: InputChanged. State == {State}. result.New.State: {result.New.State}.  DI State: {DigitalIn.State}");
 
             if (state)
             {
-                // TODO: BC 2021.05.21 - I don't think this is right. Clicked
-                // shouldn't raise until the press is released, and only if it's
-                // not a long clicked
-                RaiseClicked();
-
                 // save our press start time (for long press event)
                 buttonPressStart = DateTime.Now;
                 // raise our event in an inheritance friendly way
                 RaisePressStarted();
             }
-            else 
+            else
             {
                 // calculate the press duration
                 TimeSpan pressDuration = DateTime.Now - buttonPressStart;
@@ -191,9 +183,13 @@ namespace Meadow.Foundation.Sensors.Buttons
                 buttonPressStart = DateTime.MaxValue;
 
                 // if it's a long press, raise our long press event
-                if (LongPressThreshold > TimeSpan.Zero && pressDuration > LongPressThreshold)
+                if (LongClickedThreshold > TimeSpan.Zero && pressDuration > LongClickedThreshold)
                 {
-                    RaiseLongPress();
+                    RaiseLongClicked();
+                }
+                else
+                {
+                    RaiseClicked();
                 }
 
                 if (pressDuration.TotalMilliseconds > 0)
@@ -231,14 +227,20 @@ namespace Meadow.Foundation.Sensors.Buttons
         /// <summary>
         /// Raised when the button circuit is pressed for at least 500ms.
         /// </summary>
-        protected virtual void RaiseLongPress()
+        protected virtual void RaiseLongClicked()
         {
-            longPressDelegate?.Invoke(this, new EventArgs());
+            longClickDelegate?.Invoke(this, new EventArgs());
         }
 
+        /// <summary>
+        /// Disposes the Digital Input resources
+        /// </summary>
         public void Dispose()
         {
-            DigitalIn.Dispose();
+            if (_shouldDisposeInput)
+            {
+                DigitalIn.Dispose();
+            }
         }
     }
 }

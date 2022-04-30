@@ -7,8 +7,10 @@ using System.Threading;
 
 namespace Leds.Led_Sample
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2, MeadowApp>
     {
+        //<!=SNIP=>
+
         readonly List<Led> leds;
 
         public MeadowApp()
@@ -58,6 +60,8 @@ namespace Leds.Led_Sample
                     Thread.Sleep(100);
                 }
 
+                Thread.Sleep(1000);
+
                 Console.WriteLine("Turning off each led every 100ms");
                 foreach (var led in leds)
                 {
@@ -65,13 +69,7 @@ namespace Leds.Led_Sample
                     Thread.Sleep(100);
                 }
 
-                Console.WriteLine("Turning on and off each led for 100ms");
-                foreach (var led in leds)
-                {
-                    led.IsOn = true;
-                    Thread.Sleep(100);
-                    led.IsOn = false;
-                }
+                Thread.Sleep(1000);
 
                 Console.WriteLine("Blinking the LEDs for a second each");
                 foreach (var led in leds)
@@ -80,7 +78,19 @@ namespace Leds.Led_Sample
                     Thread.Sleep(1000);
                     led.Stop();
                 }
+
+                Console.WriteLine("Blinking the LEDs for a second each with on (1s) and off (1s)");
+                foreach (var led in leds)
+                {
+                    led.StartBlink(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+                    Thread.Sleep(1000);
+                    led.Stop();
+                }
+
+                Thread.Sleep(1000);
             }
         }
+
+        //<!=SNOP=>
     }
 }

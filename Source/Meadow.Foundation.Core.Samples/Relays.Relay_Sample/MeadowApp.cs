@@ -6,8 +6,10 @@ using Meadow.Foundation.Relays;
 
 namespace Relays.Relay_Sample
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2, MeadowApp>
     {
+        //<!=SNIP=>
+
         protected Relay relay;
 
         public MeadowApp()
@@ -35,5 +37,7 @@ namespace Relays.Relay_Sample
                 Thread.Sleep(500);
             }
         }
+
+        //<!=SNOP=>
     }
 }

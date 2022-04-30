@@ -10,8 +10,17 @@ namespace Meadow.Foundation.Motors
     /// </summary>
     public class HBridgeMotor : IDCMotor
     {
+        /// <summary>
+        /// PWM port for left motor
+        /// </summary>
         protected IPwmPort motorLeftPwm; // H-Bridge 1A pin
+        /// <summary>
+        /// PWM port for right motor
+        /// </summary>
         protected IPwmPort motorRighPwm; // H-Bridge 2A pin
+        /// <summary>
+        /// Digital output port to enable h-bridge
+        /// </summary>
         protected IDigitalOutputPort enablePort; // if enabled, then IsNeutral = false
 
         /// <summary>
@@ -27,13 +36,14 @@ namespace Meadow.Foundation.Motors
                 enablePort.State = !isNeutral;
             }
         }
-        protected bool isNeutral = true;
+        bool isNeutral = true;
 
         /// <summary>
         /// The power applied to the motor, as a percentage between
         /// `-1.0` and `1.0`.
         /// </summary>
-        public float Power {
+        public float Power 
+        {
             get => power;
             set {
                 motorLeftPwm.Stop();
@@ -53,27 +63,13 @@ namespace Meadow.Foundation.Motors
                 motorRighPwm.Start();
             }
         }
-        protected float power = 0;
-
-        /// <summary>
-        /// Obsolete, please use `Power`.
-        /// </summary>
-        [Obsolete]
-        public float Speed
-        {
-            get => Power;
-            set { Power = value; }
-        }
+        float power = 0;
 
         /// <summary>
         /// The frequency of the PWM used to drive the motors. 
         /// Default value is 1600.
         /// </summary>
-        public float PwmFrequency
-        {
-            get => pwmFrequency;
-        }
-        protected readonly float pwmFrequency;
+        public float PwmFrequency => motorLeftPwm.Frequency;
 
         /// <summary>
         /// Not all motors are created equally. This number scales the Speed Input so
@@ -81,30 +77,36 @@ namespace Meadow.Foundation.Motors
         /// </summary>
         public float MotorCalibrationMultiplier { get; set; } = 1;
 
-        // TODO: this convenience constructor is weird. we create the PWM but
-        // not the digital output port. i think if we're going to have a convenience
-        // constructor it should be:
+        /// <summary>
+        /// Create an HBridgeMotor object
+        /// </summary>
+        /// <param name="device"></param>
+        /// <param name="a1Pin"></param>
+        /// <param name="a2Pin"></param>
+        /// <param name="enablePin"></param>
+        /// <param name="pwmFrequency"></param>
         public HBridgeMotor(IMeadowDevice device, IPin a1Pin, IPin a2Pin, IPin enablePin, float pwmFrequency = 1600) :
             this(device.CreatePwmPort(a1Pin), device.CreatePwmPort(a2Pin), device.CreateDigitalOutputPort(enablePin), pwmFrequency)
         { }
-        // and we should [obsolete] or delete this one:
-        public HBridgeMotor(IPwmOutputController device, IPin a1Pin, IPin a2Pin, IDigitalOutputPort enablePin, float pwmFrequency = 1600) :
-            this(device.CreatePwmPort(a1Pin), device.CreatePwmPort(a2Pin), enablePin, pwmFrequency)
-        { }
 
-        public HBridgeMotor(IPwmPort a1Pin, IPwmPort a2Pin, IDigitalOutputPort enablePin, float pwmFrequency = 1600)
+        /// <summary>
+        /// Create an HBridgeMotor object
+        /// </summary>
+        /// <param name="a1Port"></param>
+        /// <param name="a2Port"></param>
+        /// <param name="enablePort"></param>
+        /// <param name="pwmFrequency"></param>
+        public HBridgeMotor(IPwmPort a1Port, IPwmPort a2Port, IDigitalOutputPort enablePort, float pwmFrequency = 1600)
         {
-            this.pwmFrequency = pwmFrequency;
-
-            motorLeftPwm = a1Pin;
-            motorLeftPwm.Frequency = 1600;
+            motorLeftPwm = a1Port;
+            motorLeftPwm.Frequency = pwmFrequency;
             motorLeftPwm.Start();
 
-            motorRighPwm = a2Pin;
-            motorRighPwm.Frequency = 1600;
+            motorRighPwm = a2Port;
+            motorRighPwm.Frequency = pwmFrequency;
             motorRighPwm.Start();
 
-            enablePort = enablePin;
+            this.enablePort = enablePort;
         }
     }
 }

@@ -6,8 +6,10 @@ using Meadow.Peripherals.Sensors.Rotary;
 
 namespace Sensors.Rotary.RotaryEncoder_Sample
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2, MeadowApp>
     {
+        //<!=SNIP=>
+
         protected int value = 0;
         protected RotaryEncoder rotaryEncoder;
 
@@ -48,9 +50,10 @@ namespace Sensors.Rotary.RotaryEncoder_Sample
             Console.WriteLine("Hardware initialization complete.");
         }
 
-        private void RotaryEncoder_Rotated(object sender, RotaryChangeResult e)
+        void RotaryEncoder_Rotated(object sender, RotaryChangeResult e)
         {
-            switch (e.New) {
+            switch (e.New)
+            {
                 case RotationDirection.Clockwise:
                     value++;
                     Console.WriteLine("/\\ Value = {0} CW", value);
@@ -61,5 +64,7 @@ namespace Sensors.Rotary.RotaryEncoder_Sample
                     break;
             }
         }
+
+        //<!=SNOP=>
     }
 }

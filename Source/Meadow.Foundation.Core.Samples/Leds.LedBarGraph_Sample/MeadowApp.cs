@@ -7,8 +7,10 @@ using System.Threading;
 
 namespace Leds.LedBarGraph_Sample
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2, MeadowApp>
     {
+        //<!=SNIP=>
+
         LedBarGraph ledBarGraph;
 
         public MeadowApp()
@@ -29,23 +31,8 @@ namespace Leds.LedBarGraph_Sample
                  Device.Pins.D03,
                  Device.Pins.D02
             };
-            ledBarGraph = new LedBarGraph(Device, pins);
 
-            // Passing an array of DigitalOutputPorts
-            //IDigitalOutputPort[] ports =
-            //{
-            //Device.CreateDigitalOutputPort(Device.Pins.D05),
-            //Device.CreateDigitalOutputPort(Device.Pins.D06),
-            //Device.CreateDigitalOutputPort(Device.Pins.D07),
-            //Device.CreateDigitalOutputPort(Device.Pins.D08),
-            //Device.CreateDigitalOutputPort(Device.Pins.D09),
-            //Device.CreateDigitalOutputPort(Device.Pins.D10),
-            //Device.CreateDigitalOutputPort(Device.Pins.D11),
-            //Device.CreateDigitalOutputPort(Device.Pins.D12),
-            //Device.CreateDigitalOutputPort(Device.Pins.D13),
-            //Device.CreateDigitalOutputPort(Device.Pins.D14)
-            //};
-            //ledBarGraph = new LedBarGraph(ports);
+            ledBarGraph = new LedBarGraph(Device, pins);
 
             TestLedBarGraph();
         }
@@ -58,20 +45,12 @@ namespace Leds.LedBarGraph_Sample
 
             while (true)
             {
-                Console.WriteLine("Turning them on using SetLed...");
+                Console.WriteLine("Turning them on and off for 1 second using SetLed...");
                 for (int i = 0; i < ledBarGraph.Count; i++)
                 {
                     ledBarGraph.SetLed(i, true);
-                    Thread.Sleep(300);
-                }
-
-                Thread.Sleep(1000);
-
-                Console.WriteLine("Turning them off using SetLed...");
-                for (int i = ledBarGraph.Count - 1; i >= 0; i--)
-                {
+                    Thread.Sleep(1000);
                     ledBarGraph.SetLed(i, false);
-                    Thread.Sleep(300);
                 }
 
                 Thread.Sleep(1000);
@@ -81,7 +60,7 @@ namespace Leds.LedBarGraph_Sample
                 {
                     percentage += 0.10m;
                     Console.WriteLine($"{percentage}");
-                    ledBarGraph.Percentage = (float) Math.Min(1.0m, percentage);                    
+                    ledBarGraph.Percentage = (float) Math.Min(1.0m, percentage);
                     Thread.Sleep(500);
                 }
 
@@ -92,7 +71,7 @@ namespace Leds.LedBarGraph_Sample
                 {
                     percentage -= 0.10m;
                     Console.WriteLine($"{percentage}");
-                    ledBarGraph.Percentage = (float) Math.Max(0.0m, percentage);                    
+                    ledBarGraph.Percentage = (float) Math.Max(0.0m, percentage);
                     Thread.Sleep(500);
                 }
 
@@ -104,7 +83,16 @@ namespace Leds.LedBarGraph_Sample
                 ledBarGraph.Stop();
 
                 Thread.Sleep(1000);
+
+                Console.WriteLine("Blinking for 3 seconds...");
+                ledBarGraph.StartBlink(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+                Thread.Sleep(3000);
+                ledBarGraph.Stop();
+
+                Thread.Sleep(1000);
             }
         }
+
+        //<!=SNOP=>
     }
 }

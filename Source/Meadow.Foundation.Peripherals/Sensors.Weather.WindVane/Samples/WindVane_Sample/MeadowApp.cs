@@ -6,23 +6,13 @@ using Meadow.Units;
 
 namespace MeadowApp
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2, MeadowApp>
     {
+        //<!=SNIP=>
+
         WindVane windVane;
 
         public MeadowApp()
-        {
-            Initialize();
-
-            // get initial reading, just to test the API
-            Azimuth azi = windVane.Read().Result;
-            Console.WriteLine($"Initial azimuth: {azi.Compass16PointCardinalName}");
-
-            // start updating
-            windVane.StartUpdating();
-        }
-
-        void Initialize()
         {
             Console.WriteLine("Initialize hardware...");
 
@@ -30,20 +20,23 @@ namespace MeadowApp
             windVane = new WindVane(Device, Device.Pins.A00);
 
             //==== Classic event example:
-            windVane.Updated += (object sender, IChangeResult<Azimuth> e) => {
-                Console.WriteLine($"Updated event {e.New.DecimalDegrees}");
-            };
+            windVane.Updated += (sender, result) => Console.WriteLine($"Updated event {result.New.DecimalDegrees}");
 
             //==== IObservable Pattern
             var observer = WindVane.CreateObserver(
-                handler: result => { Console.WriteLine($"Wind Direction: {result.New.Compass16PointCardinalName}"); },
+                handler: result => Console.WriteLine($"Wind Direction: {result.New.Compass16PointCardinalName}"),
                 filter: null
             );
             windVane.Subscribe(observer);
 
+            // get initial reading, just to test the API
+            Azimuth azi = windVane.Read().Result;
+            Console.WriteLine($"Initial azimuth: {azi.Compass16PointCardinalName}");
 
-            Console.WriteLine("Initialization complete.");
+            // start updating
+            windVane.StartUpdating(TimeSpan.FromSeconds(1));
         }
 
+        //<!=SNOP=>
     }
 }

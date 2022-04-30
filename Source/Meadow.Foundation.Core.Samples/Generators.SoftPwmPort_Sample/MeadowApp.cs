@@ -7,8 +7,10 @@ using Meadow.Hardware;
 
 namespace Generators.SoftPwmPort_Sample
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2, MeadowApp>
     {
+        //<!=SNIP=>
+
         protected SoftPwmPort softPwmPort;
 
         public MeadowApp()
@@ -39,5 +41,7 @@ namespace Generators.SoftPwmPort_Sample
                 Thread.Sleep(500);
             }
         }
+
+        //<!=SNOP=>
     }
 }

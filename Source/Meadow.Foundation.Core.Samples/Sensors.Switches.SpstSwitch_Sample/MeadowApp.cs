@@ -6,8 +6,10 @@ using Meadow.Hardware;
 
 namespace Sensors.Switches.SpstSwitch_Sample
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2, MeadowApp>
     {
+        //<!=SNIP=>
+
         protected SpstSwitch spstSwitch;
 
         public MeadowApp()
@@ -23,5 +25,7 @@ namespace Sensors.Switches.SpstSwitch_Sample
 
             Console.WriteLine("SpstSwitch ready...");
         }
+
+        //<!=SNOP=>
     }
 }

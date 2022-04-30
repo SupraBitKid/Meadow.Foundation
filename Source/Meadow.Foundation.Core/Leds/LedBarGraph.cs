@@ -9,6 +9,9 @@ namespace Meadow.Foundation.Leds
     /// </summary>
     public class LedBarGraph
     {
+        /// <summary>
+        /// Array to hold LED objects for bar 
+        /// </summary>
         protected Led[] leds;
 
         /// <summary>
@@ -19,12 +22,12 @@ namespace Meadow.Foundation.Leds
         /// <summary>
         /// A value between 0 and 1 that controls the number of LEDs that are activated
         /// </summary>
-        float percentage;
         public float Percentage
         {
             get => percentage;
             set => SetPercentage(percentage = value);
         }
+        float percentage;
 
         /// <summary>
         /// Create an LedBarGraph instance from an array of IPins
@@ -106,11 +109,25 @@ namespace Meadow.Foundation.Leds
         }
 
         /// <summary>
+        /// Blink animation that turns the LED bar graph on (500ms) and off (500ms)
+        /// </summary>
+        public void StartBlink()
+        {
+            var onDuration = TimeSpan.FromMilliseconds(500);
+            var offDuration = TimeSpan.FromMilliseconds(500);
+
+            foreach (var led in leds)
+            {
+                led.StartBlink(onDuration, offDuration);
+            }
+        }
+
+        /// <summary>
         /// Blink animation that turns the LED bar graph on and off based on the OnDuration and offDuration values in ms
         /// </summary>
         /// <param name="onDuration"></param>
         /// <param name="offDuration"></param>
-        public void StartBlink(int onDuration = 200, int offDuration = 200)
+        public void StartBlink(TimeSpan onDuration, TimeSpan offDuration)
         {
             foreach (var led in leds)
             {
@@ -119,12 +136,29 @@ namespace Meadow.Foundation.Leds
         }
 
         /// <summary>
+        /// Starts a blink animation on an individual LED on (500ms) and off (500ms)
+        /// </summary>
+        /// <param name="index"></param>
+        public void SetLedBlink(int index)
+        {
+            var onDuration = TimeSpan.FromMilliseconds(500);
+            var offDuration = TimeSpan.FromMilliseconds(500);
+
+            if (index >= Count)
+            {
+                throw new ArgumentOutOfRangeException();
+            }
+
+            leds[index].StartBlink(onDuration, offDuration);
+        }
+
+        /// <summary>
         /// Starts a blink animation on an individual LED
         /// </summary>
         /// <param name="index"></param>
         /// <param name="onDuration"></param>
         /// <param name="offDuration"></param>
-        public void SetLedBlink(int index, int onDuration = 200, int offDuration = 200)
+        public void SetLedBlink(int index, TimeSpan onDuration, TimeSpan offDuration)
         {
             if (index >= Count)
             {
@@ -143,54 +177,6 @@ namespace Meadow.Foundation.Leds
             {
                 led.Stop();
             }
-        }
-
-        /// <summary>
-        /// Set the LED state
-        /// </summary>
-        /// <param name="index">index of the LED</param>
-        /// <param name="isOn"></param>
-        [Obsolete("Method deprecated: use SetLed(int index, bool isOn)")]
-        public void SetLed(uint index, bool isOn)
-        {
-            if (index >= Count)
-            {
-                throw new ArgumentOutOfRangeException();
-            }
-
-            leds[index].Stop();
-            leds[index].IsOn = isOn;
-        }
-
-        /// <summary>
-        /// Blink animation that turns the LED bar graph on and off based on the OnDuration and offDuration values in ms
-        /// </summary>
-        /// <param name="onDuration"></param>
-        /// <param name="offDuration"></param>
-        [Obsolete("Method deprecated: use StartBlink(int onDuration, int offDuration)")]
-        public void StartBlink(uint onDuration, uint offDuration)
-        {
-            foreach (var led in leds)
-            {
-                led.StartBlink(onDuration, offDuration);
-            }
-        }
-
-        /// <summary>
-        /// Starts a blink animation on an individual LED
-        /// </summary>
-        /// <param name="index"></param>
-        /// <param name="onDuration"></param>
-        /// <param name="offDuration"></param>
-        [Obsolete("Method deprecated: use SetLedBlink(int index, int onDuration, int offDuration)")]
-        public void SetLedBlink(uint index, uint onDuration, uint offDuration)
-        {
-            if (index >= Count)
-            {
-                throw new ArgumentOutOfRangeException();
-            }
-
-            leds[index].StartBlink(onDuration, offDuration);
         }
     }
 }

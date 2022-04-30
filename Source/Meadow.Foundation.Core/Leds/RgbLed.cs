@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Meadow.Peripherals.Leds;
 using static Meadow.Peripherals.Leds.IRgbLed;
 using System;
-using Meadow.Devices;
 
 namespace Meadow.Foundation.Leds
 {
@@ -13,8 +12,8 @@ namespace Meadow.Foundation.Leds
     /// </summary>
     public partial class RgbLed : IRgbLed
     {
-        protected Task? animationTask;
-        protected CancellationTokenSource? cancellationTokenSource;
+        Task? animationTask;
+        CancellationTokenSource? cancellationTokenSource;
 
         /// <summary>
         /// Get the color the LED has been set to.
@@ -24,15 +23,17 @@ namespace Meadow.Foundation.Leds
         /// <summary>
         /// Get the red LED port
         /// </summary>
-        public IDigitalOutputPort RedPort { get; protected set; }
+        protected IDigitalOutputPort RedPort { get; set; }
+
         /// <summary>
         /// Get the green LED port
         /// </summary>
-        public IDigitalOutputPort GreenPort { get; protected set; }
+        protected IDigitalOutputPort GreenPort { get; set; }
+
         /// <summary>
         /// Get the blue LED port
         /// </summary>
-        public IDigitalOutputPort BluePort { get; protected set; }
+        protected IDigitalOutputPort BluePort { get; set; }
 
         /// <summary>
         /// Is the LED using a common cathode
@@ -51,7 +52,7 @@ namespace Meadow.Foundation.Leds
                 isOn = value;
             }
         }
-        protected bool isOn;
+        bool isOn;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:Meadow.Foundation.Leds.RgbLed"/> class.
@@ -157,12 +158,31 @@ namespace Meadow.Foundation.Leds
         }
 
         /// <summary>
-        /// Starts the blink animation.
+        /// Starts the blink animation LED turning it on (500) and off (500)
+        /// </summary>
+        /// <param name="color"></param>
+        public void StartBlink(Colors color)
+        {
+            var onDuration = TimeSpan.FromMilliseconds(500);
+            var offDuration = TimeSpan.FromMilliseconds(500);
+
+            Stop();
+
+            animationTask = new Task(async () =>
+            {
+                cancellationTokenSource = new CancellationTokenSource();
+                await StartBlinkAsync(color, onDuration, offDuration, cancellationTokenSource.Token);
+            });
+            animationTask.Start();
+        }
+
+        /// <summary>
+        /// Starts the blink animation with the specified on and off duration.
         /// </summary>
         /// <param name="color"></param>
         /// <param name="onDuration"></param>
         /// <param name="offDuration"></param>
-        public void StartBlink(Colors color, int onDuration = 200, int offDuration = 200)
+        public void StartBlink(Colors color, TimeSpan onDuration, TimeSpan offDuration)
         {
             Stop();
 
@@ -174,7 +194,15 @@ namespace Meadow.Foundation.Leds
             animationTask.Start();
         }
         
-        protected async Task StartBlinkAsync(Colors color, int onDuration, int offDuration, CancellationToken cancellationToken)
+        /// <summary>
+        /// Turn the LED on and off (blink)
+        /// </summary>
+        /// <param name="color"></param>
+        /// <param name="onDuration"></param>
+        /// <param name="offDuration"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        protected async Task StartBlinkAsync(Colors color, TimeSpan onDuration, TimeSpan offDuration, CancellationToken cancellationToken)
         {
             while (true)
             {
@@ -184,29 +212,10 @@ namespace Meadow.Foundation.Leds
                 }
 
                 SetColor(color);
-                await Task.Delay((int)onDuration);
+                await Task.Delay(onDuration);
                 SetColor(Colors.Black);
-                await Task.Delay((int)offDuration);
+                await Task.Delay(offDuration);
             }
-        }
-
-        /// <summary>
-        /// Starts the blink animation.
-        /// </summary>
-        /// <param name="color"></param>
-        /// <param name="onDuration"></param>
-        /// <param name="offDuration"></param>
-        [Obsolete("Method deprecated: use StartBlink(Colors color, int onDuration, int offDuration)")]
-        public void StartBlink(Colors color, uint onDuration, uint offDuration)
-        {
-            Stop();
-
-            animationTask = new Task(async () =>
-            {
-                cancellationTokenSource = new CancellationTokenSource();
-                await StartBlinkAsync(color, (int)onDuration, (int)offDuration, cancellationTokenSource.Token);
-            });
-            animationTask.Start();
         }
     }
 }

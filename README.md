@@ -1,19 +1,37 @@
+<img src="Design/banner.jpg" style="margin-bottom:10px" />
+
 # Meadow.Foundation
 
-main:
-[![Build Status](https://dev.azure.com/WildernessLabs/Meadow/_apis/build/status/WildernessLabs.Meadow.Foundation?repoName=WildernessLabs%2FMeadow.Foundation&branchName=main)](https://dev.azure.com/WildernessLabs/Meadow/_build/latest?definitionId=6&repoName=WildernessLabs%2FMeadow.Foundation&branchName=main)
-develop:
-[![Build Status](https://dev.azure.com/WildernessLabs/Meadow/_apis/build/status/WildernessLabs.Meadow.Foundation?repoName=WildernessLabs%2FMeadow.Foundation&branchName=develop)](https://dev.azure.com/WildernessLabs/Meadow/_build/latest?definitionId=6&repoName=WildernessLabs%2FMeadow.Foundation&branchName=develop)
+The [Meadow.Foundation](http://developer.wildernesslabs.co/Meadow/Meadow.Foundation/Peripherals/) peripherals library is an open source repository of drivers and libraries that streamline and simplifiy adding hardware to your .NET Meadow IoT application.
 
-Meadow.Foundation greatly simplifies the task of building connected things with Meadow, by providing a unified driver and library framework that includes drivers and abstractions for common peripherals such as sensors, displays, motors, and more. Additionally, it includes utility functions and helpers for common tasks when building connected things.
+Meadow.Foundation makes the task of building connected things easy with Meadow by providing a unified driver and library framework that includes drivers and abstractions for common peripherals such as: sensors, displays, motors, cameras and more. Additionally, it includes utility functions and helpers for common tasks when building connected things.
+
+## Repositories 
+
+Meadow.Foundation is currently split into three (3) GitHub repos:
+1. [Meadow.Foundation](https://github.com/WildernessLabs/Meadow.Foundation/) which contains the majority of the peripheral and library source code
+2. [Meadow.Foundation.Featherwings](https://github.com/WildernessLabs/Meadow.Foundation.Featherwings/) contains drivers for hardware that conforms to the [Adafruit Featherwing](https://learn.adafruit.com/adafruit-feather/) form factor
+3. [Meadow.Foundaion.Grove](https://github.com/WildernessLabs/Meadow.Foundation.Grove/) contains drivers for [Seeed Studio Grove](https://www.seeedstudio.com/grove.html) modular hardware peripherals
+
+## Repository Status
+
+| Feature | Branch | Status |
+| --- | --- | --- |
+| Drivers | `develop` | [![Build Status](https://dev.azure.com/WildernessLabs/Meadow/_apis/build/status/WildernessLabs.Meadow.Foundation?repoName=WildernessLabs%2FMeadow.Foundation&branchName=develop)](https://dev.azure.com/WildernessLabs/Meadow/_build/latest?definitionId=6&repoName=WildernessLabs%2FMeadow.Foundation&branchName=develop) |
+| Maple | `develop` | [![Maple Build](https://github.com/WildernessLabs/Meadow.Foundation/actions/workflows/build_maple.yml/badge.svg?branch=develop)](https://github.com/WildernessLabs/Meadow.Foundation/actions/workflows/build_maple.yml) |
+
+## Requesting New Drivers
+
+If you have a need for a driver that we don't yet support, you have a couple options:
+
+- Use an existing, similar driver as a template for your new driver.  We accept pull requests, but don't require them.
+- Open a new item on the [Issues Tab](https://github.com/WildernessLabs/Meadow.Foundation/issues) and request the driver so we can prioritize it.
 
 [![Build Status](https://dev.azure.com/WildernessLabs/Meadow/_apis/build/status/WildernessLabs.Meadow.Foundation?branchName=develop)](https://dev.azure.com/WildernessLabs/Meadow/_build/latest?definitionId=6&branchName=develop)
 
 # Documentation
 
-You can read more Meadow.Foundation and how to get started in our [beta developer site](http://beta-developer.wildernesslabs.co/Meadow/Meadow.Foundation/).
-
-Refer to our [Meadow.Foundation Peripherals Status](https://docs.google.com/spreadsheets/d/1U0asbAYjQgJ6dvqVXnvL8X1BPZiGZcpNl-GsdKagp2s/edit#gid=0) spreadsheet to track the progress of all the peripherals we're supporting in our latest version.
+You can read more Meadow.Foundation and how to get started in our [developer site](http://developer.wildernesslabs.co/Meadow/Meadow.Foundation/).
 
 ## Using
 
@@ -33,7 +51,7 @@ Meadow.Foundation, is open source and community powered. We love pull requests, 
 
 # License
 
-Copyright 2019, Wilderness Labs Inc.
+Copyright 2019-2022, Wilderness Labs Inc.
     
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -74,7 +92,7 @@ Make sure the script is executable by running `chmod u+x nugetize.sh`
 # Publishing Nuget Packages
 
 To trigger a new build:  
-- Go to project properties in VS 2017  
+- Go to project properties in VS 2019 / 2022 
 - in the `Package` tab, increment either the MAJOR or MINOR `Package version`.  
 
 The CI job will pick up the changes, pack, and push the Nuget package.

@@ -7,7 +7,15 @@ resources:
       type: github
       endpoint: WildernessLabs
       name: WildernessLabs/Meadow.Core
-
+    - repository: MeadowContracts
+      type: github
+      endpoint: WildernessLabs
+      name: WildernessLabs/Meadow.Contracts
+    - repository: MeadowUnits
+      type: github
+      endpoint: WildernessLabs
+      name: WildernessLabs/Meadow.Units
+      
 trigger:
   - main
   - develop
@@ -20,7 +28,7 @@ variables:
   solution: "**/Meadow.Foundation.sln"
   buildPlatform: "Any CPU"
   buildConfiguration: "Release"
-  internalFeedName: "Meadow02"
+  internalFeedName: "Meadow.Staging"
 
 pool:
   vmImage: windows-2019
@@ -32,6 +40,8 @@ stages:
         steps:
           - checkout: self
           - checkout: MeadowCore
+          - checkout: MeadowContracts
+          - checkout: MeadowUnits
           - task: NuGetToolInstaller@1
             inputs:
               versionSpec: 5.8

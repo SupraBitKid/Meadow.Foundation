@@ -7,14 +7,10 @@ namespace Meadow.Foundation.Sensors.Switches
 {
     /// <summary>
     /// Represents a simple, two position, Single-Pole-Dual-Throw (SPDT) switch that closes a circuit 
-    /// to either ground/common or high depending on position.
-    /// 
-    /// Note: This class is not yet implemented.
+    /// to either ground/common or high depending on position.    
     /// </summary>
     public class SpdtSwitch : ISwitch, ISensor
     {
-        #region Properties
-
         /// <summary>
         /// Describes whether or not the switch circuit is closed/connected (IsOn = true), or open (IsOn = false).
         /// </summary>
@@ -27,16 +23,12 @@ namespace Meadow.Foundation.Sensors.Switches
         /// <summary>
         /// Returns the DigitalInputPort.
         /// </summary>
-        public IDigitalInputPort DigitalIn { get; protected set; }
+        protected IDigitalInputPort DigitalIn { get; set; }
 
         /// <summary>
         /// Raised when the switch circuit is opened or closed.
         /// </summary>
         public event EventHandler Changed = delegate { };
-
-        #endregion
-
-        #region Constructors
 
         /// <summary>
         /// Instantiates a new SpdtSwitch object with the center pin connected to the specified digital pin, one pin connected to common/ground and one pin connected to high/3.3V.
@@ -60,10 +52,6 @@ namespace Meadow.Foundation.Sensors.Switches
             DigitalIn.Changed += DigitalInChanged;
         }
 
-        #endregion
-
-        #region Methods
-
         /// <summary>
         /// Event handler when switch value has been changed
         /// </summary>
@@ -73,7 +61,5 @@ namespace Meadow.Foundation.Sensors.Switches
         {
             IsOn = DigitalIn.State;
         }
-
-        #endregion
     }
 }

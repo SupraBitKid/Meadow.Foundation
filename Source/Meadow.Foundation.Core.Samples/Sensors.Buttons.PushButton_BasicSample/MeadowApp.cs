@@ -13,7 +13,7 @@ namespace MeadowApp
     /// terminates on the `3V3` rail on one end, and `D02` on the other, such
     /// that when the button is pressed, `D02` is raised `HIGH`.
     /// </summary>
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2, MeadowApp>
     {
         RgbPwmLed onboardLed;
         PushButton pushButton;
@@ -32,7 +32,6 @@ namespace MeadowApp
                 redPwmPin: Device.Pins.OnboardLedRed,
                 greenPwmPin: Device.Pins.OnboardLedGreen,
                 bluePwmPin: Device.Pins.OnboardLedBlue,
-                3.3f, 3.3f, 3.3f,
                 Meadow.Peripherals.Leds.IRgbLed.CommonType.CommonAnode);
 
             //===== Push Button
@@ -61,8 +60,8 @@ namespace MeadowApp
                 onboardLed.IsOn = false;
             };
             // `LongPressClicked`
-            pushButton.LongPressClicked += (s, e) => {
-                Console.WriteLine("pushButton.LongPressClicked.");
+            pushButton.LongClicked += (s, e) => {
+                Console.WriteLine("pushButton.LongClicked.");
                 onboardLed.SetColor(WildernessLabsColors.ChileanFire);
                 Thread.Sleep(1000);
                 onboardLed.IsOn = false;

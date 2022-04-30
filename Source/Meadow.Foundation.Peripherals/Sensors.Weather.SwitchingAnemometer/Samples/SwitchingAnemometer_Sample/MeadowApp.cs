@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using Meadow;
 using Meadow.Devices;
 using Meadow.Foundation;
@@ -9,18 +8,16 @@ using Meadow.Units;
 
 namespace MeadowApp
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2, MeadowApp>
     {
+        //<!=SNIP=>
+
         RgbPwmLed onboardLed;
         SwitchingAnemometer anemometer;
 
         public MeadowApp()
         {
-            Initialize();
-        }
-
-        void Initialize()
-        {
+        
             Console.WriteLine("Initialize hardware...");
 
             //==== onboard LED
@@ -28,17 +25,16 @@ namespace MeadowApp
                 redPwmPin: Device.Pins.OnboardLedRed,
                 greenPwmPin: Device.Pins.OnboardLedGreen,
                 bluePwmPin: Device.Pins.OnboardLedBlue,
-                3.3f, 3.3f, 3.3f,
                 Meadow.Peripherals.Leds.IRgbLed.CommonType.CommonAnode);
 
             //==== create the anemometer
             anemometer = new SwitchingAnemometer(Device, Device.Pins.A01);
 
             //==== classic events example
-            anemometer.WindSpeedUpdated += (object sender, IChangeResult<Speed> e) =>
+            anemometer.WindSpeedUpdated += (sender, result) =>
             {
-                Console.WriteLine($"new speed: {e.New.KilometersPerHour:n1}kmh, old: {e.Old?.KilometersPerHour:n1}kmh");
-                OutputWindSpeed(e.New);
+                Console.WriteLine($"new speed: {result.New.KilometersPerHour:n1}kmh, old: {result.Old?.KilometersPerHour:n1}kmh");
+                OutputWindSpeed(result.New);
             };
 
             //==== IObservable example
@@ -46,11 +42,6 @@ namespace MeadowApp
                 handler: result => {
                     Console.WriteLine($"new speed (from observer): {result.New.KilometersPerHour:n1}kmh, old: {result.Old?.KilometersPerHour:n1}kmh");
                 },
-                // only notify if it's change more than 0.1kmh:
-                //filter: result => {
-                //    Console.WriteLine($"delta: {result.Delta}");
-                //    return result.Delta > 0.1;
-                //    }
                 null
                 );
             anemometer.Subscribe(observer);
@@ -72,10 +63,9 @@ namespace MeadowApp
             int r = (int)windspeed.KilometersPerHour.Map(0f, 10f, 0f, 255f);
             int b = (int)windspeed.KilometersPerHour.Map(0f, 10f, 255f, 0f);
 
-            //Console.WriteLine($"r: {r}, b: {b}");
-
             var wspeedColor = Color.FromRgb(r, 0, b);
             onboardLed.SetColor(wspeedColor);
         }
+        //<!=SNOP=>
     }
 }

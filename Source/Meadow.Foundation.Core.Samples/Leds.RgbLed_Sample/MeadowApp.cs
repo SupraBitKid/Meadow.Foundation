@@ -7,13 +7,22 @@ using Meadow.Foundation.Leds;
 
 namespace Leds.RgbLed_Sample
 {
-    public class MeadowApp : App<F7Micro, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2, MeadowApp>
     {
+        //<!=SNIP=>
+
         protected List<RgbLed> rgbLeds;
 
         public MeadowApp()
         {
             Console.WriteLine("Initializing...");
+
+            var onRgbLed = new RgbLed(
+                device: Device,
+                redPin: Device.Pins.OnboardLedRed,
+                greenPin: Device.Pins.OnboardLedGreen,
+                bluePin: Device.Pins.OnboardLedBlue);
+            onRgbLed.SetColor(RgbLed.Colors.Red);
 
             rgbLeds = new List<RgbLed>
             {
@@ -35,6 +44,8 @@ namespace Leds.RgbLed_Sample
                     Device.CreateDigitalOutputPort(Device.Pins.D13))
             };
 
+            onRgbLed.SetColor(RgbLed.Colors.Green);
+
             TestRgbLeds();
         }
 
@@ -54,6 +65,8 @@ namespace Leds.RgbLed_Sample
                     }
                 }
 
+                Thread.Sleep(1000);
+
                 Console.WriteLine("Blinking through each color on each RGB LED...");
                 foreach (var rgbLed in rgbLeds)
                 {
@@ -63,7 +76,23 @@ namespace Leds.RgbLed_Sample
                         Thread.Sleep(3000);
                     }
                 }
+
+                Thread.Sleep(1000);
+
+                Console.WriteLine("Blinking through each color on each RGB LED...");
+                foreach (var rgbLed in rgbLeds)
+                {
+                    for (int i = 0; i < (int)RgbLed.Colors.count; i++)
+                    {
+                        rgbLed.StartBlink((RgbLed.Colors)i, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+                        Thread.Sleep(3000);
+                    }
+                }
+
+                Thread.Sleep(1000);
             }
         }
+
+        //<!=SNOP=>
     }
 }

@@ -1,5 +1,4 @@
-﻿using Meadow.Devices;
-using Meadow.Hardware;
+﻿using Meadow.Hardware;
 using Meadow.Peripherals.Leds;
 using System;
 using System.Threading;
@@ -12,14 +11,14 @@ namespace Meadow.Foundation.Leds
     /// </summary>
     public class Led : ILed
 	{
-		protected Task? animationTask;
-		protected CancellationTokenSource? cancellationTokenSource;
+		Task? animationTask;
+		CancellationTokenSource? cancellationTokenSource;
 
 		/// <summary>
 		/// Gets the port that is driving the LED
 		/// </summary>
 		/// <value>The port</value>
-		public IDigitalOutputPort Port { get; protected set; }
+		protected IDigitalOutputPort Port { get; set; }
 
 		/// <summary>
 		/// Gets or sets a value indicating whether this <see cref="T:Meadow.Foundation.Leds.Led"/> is on.
@@ -27,18 +26,19 @@ namespace Meadow.Foundation.Leds
 		/// <value><c>true</c> if is on; otherwise, <c>false</c>.</value>
 		public bool IsOn
 		{
-			get { return isOn; }
+			get => isOn; 
 			set
 			{
 				isOn = value;
 				Port.State = isOn;
 			}
 		}
-		protected bool isOn;
+		bool isOn;
 
 		/// <summary>
 		/// Creates a LED through a pin directly from the Digital IO of the board
 		/// </summary>
+		/// <param name="device">IDigitalOutputController to instantiate output port</param>
 		/// <param name="pin"></param>
 		public Led(IDigitalOutputController device, IPin pin) :
 			this(device.CreateDigitalOutputPort(pin, false))
@@ -63,11 +63,29 @@ namespace Meadow.Foundation.Leds
 		}
 
 		/// <summary>
+		/// Blink animation that turns the LED on (500ms) and off (500ms)
+		/// </summary>
+		public void StartBlink()
+		{
+			var onDuration = TimeSpan.FromMilliseconds(500);
+			var offDuration = TimeSpan.FromMilliseconds(500);
+
+			Stop();
+
+			animationTask = new Task(async () =>
+			{
+				cancellationTokenSource = new CancellationTokenSource();
+				await StartBlinkAsync(onDuration, offDuration, cancellationTokenSource.Token);
+			});
+			animationTask.Start();
+		}
+
+		/// <summary>
 		/// Blink animation that turns the LED on and off based on the OnDuration and offDuration values in ms
 		/// </summary>
 		/// <param name="onDuration"></param>
 		/// <param name="offDuration"></param>
-		public void StartBlink(int onDuration = 200, int offDuration = 200)
+		public void StartBlink(TimeSpan onDuration, TimeSpan offDuration)
 		{
 			Stop();
 
@@ -79,7 +97,14 @@ namespace Meadow.Foundation.Leds
 			animationTask.Start();
 		}
 		
-		protected async Task StartBlinkAsync(int onDuration, int offDuration, CancellationToken cancellationToken)
+		/// <summary>
+		/// Set LED to blink
+		/// </summary>
+		/// <param name="onDuration">on duration in ms</param>
+		/// <param name="offDuration">off duration in ms</param>
+		/// <param name="cancellationToken">cancellation token used to cancel blink</param>
+		/// <returns></returns>
+		protected async Task StartBlinkAsync(TimeSpan onDuration, TimeSpan offDuration, CancellationToken cancellationToken)
 		{
 			while (true)
 			{
@@ -89,30 +114,12 @@ namespace Meadow.Foundation.Leds
 				}
 
 				Port.State = true;
-				await Task.Delay((int)onDuration);
+				await Task.Delay(onDuration);
 				Port.State = false;
-				await Task.Delay((int)offDuration);
+				await Task.Delay(offDuration);
 			}
 
 			Port.State = IsOn;
-		}
-
-		/// <summary>
-		/// Blink animation that turns the LED on and off based on the OnDuration and offDuration values in ms
-		/// </summary>
-		/// <param name="onDuration"></param>
-		/// <param name="offDuration"></param>
-		[Obsolete("Method deprecated: use StartBlink(int onDuration, int offDuration)")]
-		public void StartBlink(uint onDuration, uint offDuration)
-		{
-			Stop();
-
-			animationTask = new Task(async () =>
-			{
-				cancellationTokenSource = new CancellationTokenSource();
-				await StartBlinkAsync((int)onDuration, (int)offDuration, cancellationTokenSource.Token);
-			});
-			animationTask.Start();
 		}
 	}
 }

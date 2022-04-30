@@ -1,39 +1,34 @@
-﻿using System;
-using Meadow.Hardware;
+﻿using Meadow.Hardware;
 using Meadow.Peripherals.Sensors.Rotary;
+using System;
 
 namespace Meadow.Foundation.Sensors.Rotary
 {
     /// <summary>
     /// Digital rotary encoder that uses two-bit Gray Code to encode rotation.
     /// </summary>
-    public class RotaryEncoder :
-        FilterableChangeObservableBase<RotationDirection>,
-        IRotaryEncoder
+    public class RotaryEncoder : ObservableBase<RotationDirection>, IRotaryEncoder
     {
-        //==== events
         /// <summary>
         /// Raised when the rotary encoder is rotated and returns a RotaryTurnedEventArgs object which describes the direction of rotation.
         /// </summary>
         public event EventHandler<RotaryChangeResult> Rotated = delegate { };
 
-        //==== properties
         /// <summary>
         /// Returns the pin connected to the A-phase output on the rotary encoder.
         /// </summary>
-        public IDigitalInputPort APhasePort { get; }
+        protected IDigitalInputPort APhasePort { get; }
 
         /// <summary>
         /// Returns the pin connected to the B-phase output on the rotary encoder.
         /// </summary>
-        public IDigitalInputPort BPhasePort { get; }
+        protected IDigitalInputPort BPhasePort { get; }
 
         /// <summary>
         /// Gets the last direction of rotation
         /// </summary>
         public RotationDirection? LastDirectionOfRotation { get; protected set; }
 
-        //==== internals
         /// <summary>
         /// Contains the previous offset used to find direction information
         /// </summary>
@@ -47,7 +42,7 @@ namespace Meadow.Foundation.Sensors.Rotary
         /// we are rotating the other direction. For each change we must consider the
         /// previous state of A and B and the current state of A and B. This can be
         /// represented as 4-bit number.
-        ///  3 2 1 0
+        /// 3 2 1 0
         /// |old|new|
         /// |A|B|A|B|
         ///
@@ -136,7 +131,7 @@ namespace Meadow.Foundation.Sensors.Rotary
             }
         }
 
-        void RaiseRotatedAndNotify(RotaryChangeResult result)
+        private void RaiseRotatedAndNotify(RotaryChangeResult result)
         {
             Rotated?.Invoke(this, result);
             base.NotifyObservers(result);
