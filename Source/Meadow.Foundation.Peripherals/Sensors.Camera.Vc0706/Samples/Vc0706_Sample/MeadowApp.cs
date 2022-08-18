@@ -1,67 +1,49 @@
 ﻿using System;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Threading;
+using System.Threading.Tasks;
+using BitMiracle.LibJpeg;
 using Meadow;
 using Meadow.Devices;
-using Meadow.Foundation;
-using Meadow.Foundation.Displays.TftSpi;
-using Meadow.Foundation.Graphics;
-using Meadow.Foundation.Leds;
 using Meadow.Foundation.Sensors.Camera;
-using Meadow.Hardware;
-using SimpleJpegDecoder;
 
 namespace Sensors.Camera.Vc0706_Sample
 {
-    public class MeadowApp : App<F7FeatherV2, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2>
     {
         //<!=SNIP=>
 
         Vc0706 camera;
 
-        //Uses SimpleJpegDecoder package for jpeg decoding
-        public MeadowApp()
+        public override Task Initialize()
         {
-            Console.WriteLine("Initialize hardware...");
+            Console.WriteLine("Initialize...");
 
             camera = new Vc0706(Device, Device.SerialPortNames.Com4, 38400);
 
-            camera.SetImageSize(Vc0706.ImageSize._320x240);
-            Console.WriteLine($"Image size is {camera.GetImageSize()}");
+            return Task.CompletedTask;
+        }
 
-            camera.TakePicture();
-
-            uint frameLen = camera.GetFrameLength();
-            Console.WriteLine($"Frame length: {frameLen}");
-
-            byte bytesToRead;
-            byte[] jpg;
-
-            var decoder = new JpegDecoder();
-
-            using (var stream = new MemoryStream())
+        public override Task Run()
+        {
+            if (!camera.SetCaptureResolution(Vc0706.ImageResolution._160x120))
             {
-                Console.WriteLine($"Decode jpeg - this operation may take serveral seconds");
-
-                while (frameLen > 0)
-                {
-                    bytesToRead = (byte)Math.Min(32, frameLen);
-
-                    var buffer = camera.ReadPicture(bytesToRead);
-
-                    stream.Write(buffer, 0, bytesToRead);
-                    frameLen -= bytesToRead;
-                }
-                jpg = decoder.DecodeJpeg(stream.ToArray());
+                Console.WriteLine("Set resolution failed");
             }
 
-            Console.WriteLine($"Jpeg data length: {jpg.Length}");
+            _ = TakePicture();
 
-            Console.WriteLine($"Jpeg decoded is {decoder.ImageSize} bytes");
-            Console.WriteLine($"Width {decoder.Width}");
-            Console.WriteLine($"Height {decoder.Height}");
-            Console.WriteLine($"IsColor {decoder.IsColor}");
+            return Task.CompletedTask;
+        }
+
+        async Task TakePicture()
+        {
+            Console.WriteLine($"Image size is {camera.GetCaptureResolution()}");
+
+            camera.CapturePhoto();
+
+            using var jpegStream = await camera.GetPhotoStream();
+
+            var jpeg = new JpegImage(jpegStream);
+            Console.WriteLine($"Image decoded - width:{jpeg.Width}, height:{jpeg.Height}");
         }
 
         //<!=SNOP=>
