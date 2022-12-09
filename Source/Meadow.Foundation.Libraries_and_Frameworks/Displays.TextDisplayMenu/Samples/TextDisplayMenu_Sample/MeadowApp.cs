@@ -1,6 +1,6 @@
 ﻿using Meadow;
 using Meadow.Devices;
-using Meadow.Foundation.Displays.Ssd130x;
+using Meadow.Foundation.Displays;
 using Meadow.Foundation.Displays.TextDisplayMenu;
 using Meadow.Foundation.Graphics;
 using Meadow.Foundation.Sensors.Buttons;
@@ -19,7 +19,6 @@ namespace MeadowApp
         Menu menu;
 
         Ssd1309 ssd1309;
-        ITextDisplay display;
 
         IButton next = null;
         IButton previous = null;
@@ -63,7 +62,7 @@ namespace MeadowApp
 
             Console.WriteLine("Create menu...");
 
-            menu = new Menu(display as ITextDisplay, menuData, false);
+            menu = new Menu(ssd1309 as ITextDisplay, menuData, false);
 
             next = new PushButton(Device, Device.Pins.D10);
             next.Clicked += (s, e) => { menu.Next(); };

@@ -1,7 +1,7 @@
 ﻿using Meadow;
 using Meadow.Devices;
 using Meadow.Foundation;
-using Meadow.Foundation.Displays.TftSpi;
+using Meadow.Foundation.Displays;
 using Meadow.Foundation.Graphics;
 using Meadow.Hardware;
 using Meadow.Units;
@@ -15,8 +15,8 @@ namespace Displays.Tft.Ili9341_Sample
     {
         //<!=SNIP=>
 
-        Ili9341 display;
         MicroGraphics graphics;
+        Ili9341 display;
 
         public override Task Initialize()
         {
@@ -27,7 +27,7 @@ namespace Displays.Tft.Ili9341_Sample
 
             Console.WriteLine("Create display driver instance");
 
-            var display = new Ili9341
+            display = new Ili9341
             (
                 device: Device,
                 spiBus: spiBus,

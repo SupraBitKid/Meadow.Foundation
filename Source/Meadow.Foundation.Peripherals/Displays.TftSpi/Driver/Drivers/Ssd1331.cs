@@ -1,15 +1,30 @@
-﻿using Meadow.Devices;
-using Meadow.Foundation.Graphics;
+﻿using Meadow.Foundation.Graphics;
 using Meadow.Hardware;
 using System.Threading;
 
-namespace Meadow.Foundation.Displays.TftSpi
+namespace Meadow.Foundation.Displays
 {
+    /// <summary>
+    /// Represents a Ssd1331 S6D02A1 TFT color display
+    /// </summary>
     public class Ssd1331 : TftSpiBase
     {
         //the SSD1331 also supports 8 bit RGB332 color but this isn't currently supported (but should be quick to add if anyone wants it
+        /// <summary>
+        /// The default display color mode
+        /// </summary>
         public override ColorType DefautColorMode => ColorType.Format16bppRgb565;
 
+        /// <summary>
+        /// Create a new Ssd1331 color display object
+        /// </summary>
+        /// <param name="device">Meadow device</param>
+        /// <param name="spiBus">SPI bus connected to display</param>
+        /// <param name="chipSelectPin">Chip select pin</param>
+        /// <param name="dcPin">Data command pin</param>
+        /// <param name="resetPin">Reset pin</param>
+        /// <param name="width">Width of display in pixels</param>
+        /// <param name="height">Height of display in pixels</param>
         public Ssd1331(IMeadowDevice device, ISpiBus spiBus, IPin chipSelectPin, IPin dcPin, IPin resetPin,
            int width = 96, int height = 64) 
             : base(device, spiBus, chipSelectPin, dcPin, resetPin, width, height, ColorType.Format16bppRgb565)
@@ -17,6 +32,26 @@ namespace Meadow.Foundation.Displays.TftSpi
             Initialize();
         }
 
+        /// <summary>
+        /// Create a new Ssd1331 color display object
+        /// </summary>
+        /// <param name="spiBus">SPI bus connected to display</param>
+        /// <param name="chipSelectPort">Chip select output port</param>
+        /// <param name="dataCommandPort">Data command output port</param>
+        /// <param name="resetPort">Reset output port</param>
+        /// <param name="width">Width of display in pixels</param>
+        /// <param name="height">Height of display in pixels</param>
+        public Ssd1331(ISpiBus spiBus, IDigitalOutputPort chipSelectPort,
+                IDigitalOutputPort dataCommandPort, IDigitalOutputPort resetPort,
+                int width = 96, int height = 64) :
+            base(spiBus, chipSelectPort, dataCommandPort, resetPort, width, height, ColorType.Format16bppRgb565)
+        {
+            Initialize();
+        }
+
+        /// <summary>
+        /// Initalize the display
+        /// </summary>
         protected override void Initialize()
         {
             // Initialization Sequence
@@ -87,6 +122,11 @@ namespace Meadow.Foundation.Displays.TftSpi
             dataCommandPort.State = Data;
         }
 
+        /// <summary>
+        /// Is the color mode supported by the display
+        /// </summary>
+        /// <param name="mode">The color mode</param>
+        /// <returns>True if supported</returns>
         public override bool IsColorModeSupported(ColorType mode)
         {
             if (mode == ColorType.Format16bppRgb565)
@@ -96,7 +136,13 @@ namespace Meadow.Foundation.Displays.TftSpi
             return false;
         }
 
-        //looks like this display only supports dimensions of 255 or less
+        /// <summary>
+        /// Set addrees window for display updates
+        /// </summary>
+        /// <param name="x0">X start in pixels</param>
+        /// <param name="y0">Y start in pixels</param>
+        /// <param name="x1">X end in pixels</param>
+        /// <param name="y1">Y end in pixels</param>
         protected override void SetAddressWindow(int x0, int y0, int x1, int y1)
         {
             SendCommand(0x15);  // column addr set

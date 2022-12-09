@@ -24,6 +24,9 @@ namespace Meadow.Foundation.Displays
         /// </summary>
         public int Height => 8 * DigitRows; //each digit takes 8 bits so multiply by 8
 
+        /// <summary>
+        /// The offscreen buffer used for the display
+        /// </summary>
         public IPixelBuffer PixelBuffer => this;
 
         /// <summary>
@@ -74,11 +77,11 @@ namespace Meadow.Foundation.Displays
         /// <summary>
         /// Draw pixel at location
         /// </summary>
-        /// <param name="x">x position</param>
-        /// <param name="y">y position</param>
-        /// <param name="colored">Is pixel colored - on/off</param>
+        /// <param name="x">x position in pixels</param>
+        /// <param name="y">y position in pixels</param>
+        /// <param name="enabled">True = turn on pixel, false = turn off pixel</param>
 
-        public void DrawPixel(int x, int y, bool colored)
+        public void DrawPixel(int x, int y, bool enabled)
         {
             var index = x % 8;
 
@@ -89,7 +92,7 @@ namespace Meadow.Foundation.Displays
                 return;
             }
 
-            if (colored)
+            if (enabled)
             {
                 buffer[display, index] = (byte)(buffer[display, index] | (byte)(1 << (y % 8)));
             }
@@ -102,8 +105,8 @@ namespace Meadow.Foundation.Displays
         /// <summary>
         /// Invert pixel at location (toggle on/off)
         /// </summary>
-        /// <param name="x">x position</param>
-        /// <param name="y">y position</param>
+        /// <param name="x">x position in pixels</param>
+        /// <param name="y">y position in pixels</param>
         public void InvertPixel(int x, int y)
         {
             var index = x % 8;
@@ -153,8 +156,8 @@ namespace Meadow.Foundation.Displays
         /// <summary>
         /// Draw buffer at location
         /// </summary>
-        /// <param name="x">x position</param>
-        /// <param name="y">y position</param>
+        /// <param name="x">x position in pixels</param>
+        /// <param name="y">y position in pixels</param>
         /// <param name="displayBuffer">buffer to draw</param>
         public void WriteBuffer(int x, int y, IPixelBuffer displayBuffer)
         {   //need to refactor to use a proper buffer

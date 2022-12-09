@@ -1,7 +1,7 @@
 ﻿using Meadow;
 using Meadow.Devices;
 using Meadow.Foundation;
-using Meadow.Foundation.Displays.TftSpi;
+using Meadow.Foundation.Displays;
 using Meadow.Foundation.Graphics;
 using Meadow.Hardware;
 using Meadow.Units;
@@ -33,7 +33,7 @@ namespace Displays.Tft.Hx8357b_Sample
                 chipSelectPin: Device.Pins.D02,
                 dcPin: Device.Pins.D01,
                 resetPin: Device.Pins.D00,
-                width: 320, height: 480, displayColorMode: ColorType.Format16bppRgb565);
+                width: 320, height: 480, colorMode: ColorType.Format16bppRgb565);
 
             graphics = new MicroGraphics(display);
             graphics.IgnoreOutOfBoundsPixels = true;

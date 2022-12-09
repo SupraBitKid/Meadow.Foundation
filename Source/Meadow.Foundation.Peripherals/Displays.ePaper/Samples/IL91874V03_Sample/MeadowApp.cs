@@ -1,6 +1,6 @@
 ﻿using Meadow;
 using Meadow.Devices;
-using Meadow.Foundation.Displays.ePaper;
+using Meadow.Foundation.Displays;
 using Meadow.Foundation.Graphics;
 using System;
 using System.Threading.Tasks;
@@ -26,7 +26,7 @@ namespace Displays.ePaper.IL91874V03_Sample
                 width: 176,
                 height: 264);
 
-            var graphics = new MicroGraphics(display);
+            graphics = new MicroGraphics(display);
 
             return base.Initialize();
         }

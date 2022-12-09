@@ -17,21 +17,17 @@ namespace Meadow.Foundation.Sensors.Location.Gnss
         /// <summary>
         /// Prefix for the GGA decoder.
         /// </summary>
-        public string Prefix {
-            get { return "GGA"; }
-        }
+        public string Prefix => "GGA";
 
         /// <summary>
         /// Friendly name for the GGA messages.
         /// </summary>
-        public string Name {
-            get { return "Global Postioning System Fix Data"; }
-        }
+        public string Name => "Global Postioning System Fix Data"; 
 
         /// <summary>
-        /// Process the data from a GGA message.
+        /// Process the data from a GGA message
         /// </summary>
-        /// <param name="data">String array of the message components for a CGA message.</param>
+        /// <param name="sentence">String array of the message components for a CGA message</param>
         public void Process(NmeaSentence sentence)
         {
             // make sure all fields are present
@@ -49,7 +45,7 @@ namespace Meadow.Foundation.Sensors.Location.Gnss
             location.TimeOfReading = NmeaUtilities.TimeOfReading(null, sentence.DataElements[0]);
             location.Position.Latitude = NmeaUtilities.DegreesMinutesDecode(sentence.DataElements[1], sentence.DataElements[2]);
             location.Position.Longitude = NmeaUtilities.DegreesMinutesDecode(sentence.DataElements[3], sentence.DataElements[4]);
-            location.FixQuality = (FixType)Converters.Integer(sentence.DataElements[5]);
+            location.FixQuality = (FixType)int.Parse(sentence.DataElements[5]);
 
             int numberOfSatellites;
             if (int.TryParse(sentence.DataElements[6], out numberOfSatellites)) {

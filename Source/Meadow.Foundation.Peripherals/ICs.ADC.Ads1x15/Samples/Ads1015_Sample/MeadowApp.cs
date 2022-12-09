@@ -4,24 +4,26 @@ using Meadow.Foundation.ICs.ADC;
 using System;
 using System.Threading.Tasks;
 
-namespace Ads1015_Sample
+namespace ADC.Ads1015_Sample
 {
     public class MeadowApp : App<F7FeatherV2>
     {
-        private Ads1x15 _adc;
+        //<!=SNIP=>
+
+        Ads1015 adc;
 
         public override async Task Initialize()
         {
             Console.WriteLine("Initialize...");
 
-            _adc = new Ads1015(
+            adc = new Ads1015(
                 Device.CreateI2cBus(Meadow.Hardware.I2cBusSpeed.FastPlus),
                 Ads1x15.Addresses.Default,
                 Ads1x15.MeasureMode.Continuous,
                 Ads1x15.ChannelSetting.A0SingleEnded,
                 Ads1015.SampleRateSetting.Sps3300);
 
-            _adc.Gain = Ads1x15.FsrGain.TwoThirds;
+            adc.Gain = Ads1x15.FsrGain.TwoThirds;
 
             var observer = Ads1015.CreateObserver(
                 handler: result =>
@@ -40,14 +42,23 @@ namespace Ads1015_Sample
                     return false;
                 }
                 );
-            _adc.Subscribe(observer);
+            adc.Subscribe(observer);
 
-            _adc.Updated += (sender, result) => 
+            adc.Updated += (sender, result) => 
             {
                 Console.WriteLine($"  Voltage: {result.New.Volts:N2}V");
             };
 
-            await _adc.Read();
+            await adc.Read();
+        }
+
+        //<!=SNIP=>
+
+        public override Task Run()
+        {
+            adc.StartUpdating(TimeSpan.FromMilliseconds(500));
+
+            return base.Run();
         }
 
         async Task TestSpeed()
@@ -59,7 +70,7 @@ namespace Ads1015_Sample
 
             for(var i = 0; i < totalSamples; i++)
             {
-                sum += await _adc.ReadRaw();
+                sum += await adc.ReadRaw();
             }
 
             var end = Environment.TickCount;
@@ -76,7 +87,7 @@ namespace Ads1015_Sample
             {
                 try
                 {
-                    var value = await _adc.Read();
+                    var value = await adc.Read();
                     Console.WriteLine($"ADC Reading {++i}: {value.Volts}V");
                 }
                 catch (Exception ex)
@@ -85,13 +96,6 @@ namespace Ads1015_Sample
                 }
                 await Task.Delay(5000);
             }
-        }
-
-        public override Task Run()
-        {
-            _adc.StartUpdating(TimeSpan.FromMilliseconds(500));
-
-            return base.Run();
         }
     }
 }

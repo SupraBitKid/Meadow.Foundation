@@ -1,14 +1,26 @@
-﻿using System.Threading;
-using Meadow.Devices;
-using Meadow.Foundation.Graphics;
+﻿using Meadow.Foundation.Graphics;
 using Meadow.Hardware;
 
-namespace Meadow.Foundation.Displays.TftSpi
+namespace Meadow.Foundation.Displays
 {
+    /// <summary>
+    /// Represents a Gc9a01 TFT color display
+    /// </summary>
     public class Gc9a01 : TftSpiBase
     {
+        /// <summary>
+        /// The display default color mode
+        /// </summary>
         public override ColorType DefautColorMode => ColorType.Format16bppRgb565;
 
+        /// <summary>
+        /// Create a new Gc9a01 color display object
+        /// </summary>
+        /// <param name="device">Meadow device</param>
+        /// <param name="spiBus">SPI bus connected to display</param>
+        /// <param name="chipSelectPin">Chip select pin</param>
+        /// <param name="dcPin">Data command pin</param>
+        /// <param name="resetPin">Reset pin</param>
         public Gc9a01(IMeadowDevice device, ISpiBus spiBus, IPin chipSelectPin, IPin dcPin, IPin resetPin) :
             base(device, spiBus, chipSelectPin, dcPin, resetPin, 240, 240, ColorType.Format16bppRgb565)
         {
@@ -16,7 +28,28 @@ namespace Meadow.Foundation.Displays.TftSpi
 
             SetRotation(Rotation.Normal);
         }
+
+        /// <summary>
+        /// Create a new Gc9a01 color display object
+        /// </summary>
+        /// <param name="spiBus">SPI bus connected to display</param>
+        /// <param name="chipSelectPort">Chip select output port</param>
+        /// <param name="dataCommandPort">Data command output port</param>
+        /// <param name="resetPort">Reset output port</param>
+        public Gc9a01(ISpiBus spiBus,
+            IDigitalOutputPort chipSelectPort,
+            IDigitalOutputPort dataCommandPort,
+            IDigitalOutputPort resetPort) :
+            base(spiBus, chipSelectPort, dataCommandPort, resetPort, 240, 240, ColorType.Format16bppRgb565)
+        {
+            Initialize();
+
+            SetRotation(Rotation.Normal);
+        }
             
+        /// <summary>
+        /// Initialize the display
+        /// </summary>
         protected override void Initialize()
         {
             SendCommand(0xEF);
@@ -244,11 +277,16 @@ namespace Meadow.Foundation.Displays.TftSpi
             SendCommand(GC9A01_INVON);
 
             SendCommand(GC9A01_SLPOUT);
-            Thread.Sleep(GC9A01_SLPOUT_DELAY);
+            DelayMs(GC9A01_SLPOUT_DELAY);
             SendCommand(GC9A01_DISPON);
-            Thread.Sleep(20);
+            DelayMs(20);
         }
 
+        /// <summary>
+        /// Is a color mode supported by the display
+        /// </summary>
+        /// <param name="mode">The color mode</param>
+        /// <returns>true if supported</returns>
         public override bool IsColorModeSupported(ColorType mode)
         {
             if (mode == ColorType.Format16bppRgb565)
@@ -258,6 +296,13 @@ namespace Meadow.Foundation.Displays.TftSpi
             return false;
         }
 
+        /// <summary>
+        /// Set address window to update
+        /// </summary>
+        /// <param name="x0">Start x position in pixels</param>
+        /// <param name="y0">End x position in pixels</param>
+        /// <param name="x1">Start y position in pixels</param>
+        /// <param name="y1">End y position in pixels</param>
         protected override void SetAddressWindow(int x0, int y0, int x1, int y1)
         {
             SendCommand((byte)LcdCommand.CASET);  // column addr set
@@ -277,6 +322,10 @@ namespace Meadow.Foundation.Displays.TftSpi
             SendCommand((byte)LcdCommand.RAMWR);  // write to RAM
         }
 
+        /// <summary>
+        /// Set the rotation of the display
+        /// </summary>
+        /// <param name="rotation">The rotation</param>
         public void SetRotation(Rotation rotation)
         {
             SendCommand(GC9A01_MADCTL);
@@ -298,9 +347,9 @@ namespace Meadow.Foundation.Displays.TftSpi
             }
         }
 
-        const byte GC9A01_RST_DELAY = 100;    ///< delay ms wait for reset finish
-        const byte GC9A01_SLPIN_DELAY = 120;  ///< delay ms wait for sleep in finish
-        const byte GC9A01_SLPOUT_DELAY = 120; ///< delay ms wait for sleep out finish
+        const byte GC9A01_RST_DELAY = 100;    // delay ms wait for reset finish
+        const byte GC9A01_SLPIN_DELAY = 120;  // delay ms wait for sleep in finish
+        const byte GC9A01_SLPOUT_DELAY = 120; // delay ms wait for sleep out finish
 
         const byte GC9A01_SWRESET = 0x01;
         const byte GC9A01_RDDID = 0x04;

@@ -1,30 +1,45 @@
-﻿using Meadow.Devices;
-using Meadow.Foundation.Graphics.Buffers;
+﻿using Meadow.Foundation.Graphics.Buffers;
 using Meadow.Hardware;
 
-namespace Meadow.Foundation.Displays.Ssd130x
+namespace Meadow.Foundation.Displays
 {
     /// <summary>
-    /// Provide an interface to the SSD1306 family of OLED displays.
+    /// Provide an interface to the SSD1306 family of OLED displays
     /// </summary>
     public partial class Ssd1306 : Ssd130xBase
     {
         /// <summary>
-        /// Create a new SSD1306 object using the default parameters for
+        /// Create a new SSD1306 object
         /// </summary>
-        /// <remarks>
-        /// Note that by default, any pixels out of bounds will throw and exception.
-        /// This can be changed by setting the <seealso cref="IgnoreOutOfBoundsPixels" />
-        /// property to true.
-        /// </remarks>
-        /// <param name="displayType">Type of SSD1306 display (default = 128x64 pixel display).</param>
-        ///
+        /// <param name="device">Meadow device</param>
+        /// <param name="spiBus">SPI bus connected to display</param>
+        /// <param name="chipSelectPin">Chip select pin</param>
+        /// <param name="dcPin">Data command pin</param>
+        /// <param name="resetPin">Reset pin</param>
+        /// <param name="displayType">Type of SSD1306 display (default = 128x64 pixel display)</param>
         public Ssd1306(IMeadowDevice device, ISpiBus spiBus, IPin chipSelectPin, IPin dcPin, IPin resetPin,
+            DisplayType displayType = DisplayType.OLED128x64):
+            this(spiBus, device.CreateDigitalOutputPort(chipSelectPin, false), device.CreateDigitalOutputPort(dcPin, true),
+                device.CreateDigitalOutputPort(resetPin, false), displayType)
+        { }
+
+        /// <summary>
+        /// Create a new Ssd1306 display object
+        /// </summary>
+        /// <param name="spiBus">SPI bus connected to display</param>
+        /// <param name="chipSelectPort">Chip select output port</param>
+        /// <param name="dataCommandPort">Data command output port</param>
+        /// <param name="resetPort">Reset output port</param>
+        /// <param name="displayType">Type of SSD1306 display (default = 128x64 pixel display)</param>
+        public Ssd1306(ISpiBus spiBus,
+            IDigitalOutputPort chipSelectPort,
+            IDigitalOutputPort dataCommandPort,
+            IDigitalOutputPort resetPort,
             DisplayType displayType = DisplayType.OLED128x64)
         {
-            dataCommandPort = device.CreateDigitalOutputPort(dcPin, false);
-            resetPort = device.CreateDigitalOutputPort(resetPin, true);
-            chipSelectPort = device.CreateDigitalOutputPort(chipSelectPin, false);
+            this.dataCommandPort = dataCommandPort;
+            this.chipSelectPort = chipSelectPort;
+            this.resetPort = resetPort;
 
             spiPeripheral = new SpiPeripheral(spiBus, chipSelectPort);
 
@@ -54,7 +69,7 @@ namespace Meadow.Foundation.Displays.Ssd130x
 
         private void InitSSD1306(DisplayType displayType)
         {
-            int width = 0, height = 0, xOffset, yOffset;
+            int width = 0, height = 0; //, xOffset, yOffset;
 
             switch (displayType)
             {
@@ -66,8 +81,8 @@ namespace Meadow.Foundation.Displays.Ssd130x
                 case DisplayType.OLED64x48:
                     width = 128;
                     height = 64;
-                    xOffset = 32;
-                    yOffset = 16;
+                    //xOffset = 32;
+                    //yOffset = 16;
                     SendCommands(Oled128x64SetupSequence);
                     break;
                 case DisplayType.OLED72x40:
@@ -101,26 +116,6 @@ namespace Meadow.Foundation.Displays.Ssd130x
             Sleep = false;
             Contrast = 0xff;
             StopScrolling();
-        }
-
-        public override void Fill(Color clearColor, bool updateDisplay = false)
-        {
-            imageBuffer.Clear(clearColor.Color1bpp);
-
-            if(updateDisplay)
-            {
-                Show();
-            }
-        }
-
-        public override void Fill(int x, int y, int width, int height, Color color)
-        {
-            imageBuffer.Fill(x, y, width, height, color);
-        }
-
-        public override void WriteBuffer(int x, int y, IPixelBuffer displayBuffer)
-        {
-            imageBuffer.WriteBuffer(x, y, displayBuffer);
         }
     }
 }

@@ -7,21 +7,31 @@ using System.Threading.Tasks;
 
 namespace Meadow.Foundation.Sensors.Atmospheric
 {
+    /// <summary>
+    /// Represents an Ms5611 pressure and temperature sensor
+    /// </summary>
     public partial class Ms5611:
         ByteCommsSensorBase<(Units.Temperature? Temperature, Pressure? Pressure)>,
         ITemperatureSensor, IBarometricPressureSensor
     {
+        /// <summary>
+        /// Temperature changed event
+        /// </summary>
         public event EventHandler<IChangeResult<Units.Temperature>> TemperatureUpdated = delegate { };
+
+        /// <summary>
+        /// Pressure changed event
+        /// </summary>
         public event EventHandler<IChangeResult<Pressure>> PressureUpdated = delegate { };
 
         /// <summary>
-        /// The temperature, in degrees celsius (°C), from the last reading.
+        /// The temperature, in degrees celsius (°C), from the last reading
         /// </summary>
         public Units.Temperature? Temperature => Conditions.Temperature;
 
         /// <summary>
         /// The pressure, in hectopascals (hPa), from the last reading. 1 hPa
-        /// is equal to one millibar, or 1/10th of a kilopascal (kPa)/centibar.
+        /// is equal to one millibar, or 1/10th of a kilopascal (kPa)/centibar
         /// </summary>
         public Pressure? Pressure => Conditions.Pressure;
 
@@ -30,27 +40,18 @@ namespace Meadow.Foundation.Sensors.Atmospheric
         /// <summary>
         /// Connect to the Ms5611 using I2C
         /// </summary>
-        /// <param name="i2c"></param>
-        /// <param name="address">i2c address - default is 0x5c</param>
+        /// <param name="i2cBus">The I2C bus connected to the device</param>
+        /// <param name="address">I2c address - default is 0x5c</param>
         /// <param name="resolution"></param>
-        public Ms5611(II2cBus i2c, byte address = (byte)Addresses.Default, Resolution resolution = Resolution.OSR_1024)
+        public Ms5611(II2cBus i2cBus, byte address = (byte)Addresses.Default, Resolution resolution = Resolution.OSR_1024)
         {
-            ms5611 = new Ms5611I2c(i2c, address, resolution);
+            ms5611 = new Ms5611I2c(i2cBus, address, resolution);
         }
 
-        /*
         /// <summary>
-        /// Connect to the Ms5611 using SPI (PS must be pulled low)
+        /// Raise events for subcribers and notify of value changes
         /// </summary>
-        /// <param name="spi"></param>
-        /// <param name="chipSelect"></param>
-        /// <param name="resolution"></param>
-        public Ms5611(ISpiBus spi, IPin chipSelect, Resolution resolution = Resolution.OSR_1024)
-        {
-            ms5611 = new Ms5611Spi(spi, chipSelect, resolution);
-        }
-        */
-
+        /// <param name="changeResult">The updated sensor data</param>
         protected override void RaiseEventsAndNotify(IChangeResult<(Units.Temperature? Temperature, Pressure? Pressure)> changeResult)
         {
             if (changeResult.New.Temperature is { } temp)
@@ -64,6 +65,10 @@ namespace Meadow.Foundation.Sensors.Atmospheric
             base.RaiseEventsAndNotify(changeResult);
         }
 
+        /// <summary>
+        /// Reads data from the sensor
+        /// </summary>
+        /// <returns>The latest sensor reading</returns>
         protected override async Task<(Units.Temperature? Temperature, Pressure? Pressure)> ReadSensor()
         {
             return await Task.Run(() => {
@@ -126,5 +131,11 @@ namespace Meadow.Foundation.Sensors.Atmospheric
 
             return result;
         }
+
+        async Task<Units.Temperature> ISamplingSensor<Units.Temperature>.Read()
+            => (await Read()).Temperature.Value;
+
+        async Task<Pressure> ISamplingSensor<Pressure>.Read()
+            => (await Read()).Pressure.Value;
     }
 }

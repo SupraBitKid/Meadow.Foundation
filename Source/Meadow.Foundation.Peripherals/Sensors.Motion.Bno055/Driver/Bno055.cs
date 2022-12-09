@@ -50,26 +50,84 @@ namespace Meadow.Foundation.Sensors.Motion
         EulerAngles? EulerOrientation, Units.Temperature? Temperature)>,
         IAccelerometer, IGyroscope, ITemperatureSensor
     {
-        //==== events
+        /// <summary>
+        /// Raised when the acceleration value changes
+        /// </summary>
         public event EventHandler<IChangeResult<Acceleration3D>> Acceleration3DUpdated = delegate { };
+
+        /// <summary>
+        /// Raised when the angular velocity value changes
+        /// </summary>
         public event EventHandler<IChangeResult<AngularVelocity3D>> AngularVelocity3DUpdated = delegate { };
+
+        /// <summary>
+        /// Raised when the magetic field value changes
+        /// </summary>
         public event EventHandler<IChangeResult<MagneticField3D>> MagneticField3DUpdated = delegate { };
+
+        /// <summary>
+        /// Raised when the quaernion orientation value changes
+        /// </summary>
         public event EventHandler<IChangeResult<Quaternion>> QuaternionOrientationUpdated = delegate { };
+
+        /// <summary>
+        /// Raised when the linear acceleration value changes
+        /// </summary>
         public event EventHandler<IChangeResult<Acceleration3D>> LinearAccelerationUpdated = delegate { };
+
+        /// <summary>
+        /// Raised when the gravity vector acceleration value changes
+        /// </summary>
         public event EventHandler<IChangeResult<Acceleration3D>> GravityVectorUpdated = delegate { };
+
+        /// <summary>
+        /// Raised when the euler orientation value changes
+        /// </summary>
         public event EventHandler<IChangeResult<EulerAngles>> EulerOrientationUpdated = delegate { };
+
+        /// <summary>
+        /// Raised when the temperature value changes
+        /// </summary>
         public event EventHandler<IChangeResult<Units.Temperature>> TemperatureUpdated = delegate { };
 
-        //==== internals
-
-        //==== properties
+        /// <summary>
+        /// Current Acceleration
+        /// </summary>
         public Acceleration3D? Acceleration3D => Conditions.Acceleration3D;
+
+        /// <summary>
+        /// Current Angular Velocity
+        /// </summary>
         public AngularVelocity3D? AngularVelocity3D => Conditions.AngularVelocity3D;
+
+        /// <summary>
+        /// Current Magnetic Field
+        /// </summary>
         public MagneticField3D? MagneticField3D => Conditions.MagneticField3D;
+
+        /// <summary>
+        /// Current Quaternion Orientation
+        /// </summary>
         public Quaternion? QuaternionOrientation => Conditions.QuaternionOrientation;
+
+        /// <summary>
+        /// Current Linear Acceleration
+        /// </summary>
         public Acceleration3D? LinearAcceleration => Conditions.LinearAcceleration;
+
+        /// <summary>
+        /// Current Gravity Vector
+        /// </summary>
         public Acceleration3D? GravityVector => Conditions.GravityVector;
+
+        /// <summary>
+        /// Current Euler Orientation
+        /// </summary>
         public EulerAngles? EulerOrientation => Conditions.EulerOrientation;
+
+        /// <summary>
+        /// Current Temperature value
+        /// </summary>
         public Units.Temperature? Temperature => Conditions.Temperature;
 
         /// <summary>
@@ -99,10 +157,7 @@ namespace Meadow.Foundation.Sensors.Motion
         /// </summary>
 	    public byte PowerMode
         {
-            get
-            {
-                return (Peripheral.ReadRegister(Registers.PowerMode));
-            }
+            get => Peripheral.ReadRegister(Registers.PowerMode);
             set
             {
                 Peripheral.WriteRegister(Registers.PowerMode, value);
@@ -118,10 +173,7 @@ namespace Meadow.Foundation.Sensors.Motion
         /// </remarks>
 	    public byte OperatingMode
         {
-            get
-            {
-                return (Peripheral.ReadRegister(Registers.OperatingMode));
-            }
+            get => Peripheral.ReadRegister(Registers.OperatingMode);
             set
             {
                 if (value > OperatingModes.MAXIMUM_VALUE)
@@ -145,10 +197,7 @@ namespace Meadow.Foundation.Sensors.Motion
         /// </remarks>
 	    private byte Page
         {
-            get
-            {
-                return Peripheral.ReadRegister(Registers.PageID);
-            }
+            get => Peripheral.ReadRegister(Registers.PageID);
             set
             {
                 if ((value != 0) && (value != 1))
@@ -162,58 +211,31 @@ namespace Meadow.Foundation.Sensors.Motion
         /// <summary>
         /// Check if sensor is currently working in Fusion mode.
         /// </summary>
-	    public bool IsInFusionMode
-        {
-            get
-            {
-                return ((OperatingMode == OperatingModes.COMPASS) ||
+	    public bool IsInFusionMode => ((OperatingMode == OperatingModes.COMPASS) ||
                         (OperatingMode == OperatingModes.MAGNET_FOR_GYROSCOPE) ||
                         (OperatingMode == OperatingModes.NINE_DEGREES_OF_FREEDOM) ||
                         (OperatingMode == OperatingModes.INERTIAL_MEASUREMENT_UNIT) ||
                         (OperatingMode == OperatingModes.NINE_DEGREES_OF_FREEDOM));
-            }
-        }
-
+            
         /// <summary>
         /// Get the system calibration status.
         /// </summary>
-        public bool IsSystemCalibrated
-        {
-            get
-            {
-                return (((Peripheral.ReadRegister(Registers.CalibrationStatus) >> 6) & 0x03) != 0);
-            }
-        }
+        public bool IsSystemCalibrated => ((Peripheral.ReadRegister(Registers.CalibrationStatus) >> 6) & 0x03) != 0;
 
         /// <summary>
         /// Get the accelerometer calibration status.
         /// </summary>
-        public bool IsAccelerometerCalibrated
-        {
-            get
-            {
-                return (((Peripheral.ReadRegister(Registers.CalibrationStatus) >> 2) & 0x03) != 0);
-            }
-        }
+        public bool IsAccelerometerCalibrated => ((Peripheral.ReadRegister(Registers.CalibrationStatus) >> 2) & 0x03) != 0;
 
         /// <summary>
         /// Get the gyroscope calibration status.
         /// </summary>
-        public bool IsGyroscopeCalibrated
-        {
-            get
-            {
-                return (((Peripheral.ReadRegister(Registers.CalibrationStatus) >> 4) & 0x03) != 0);
-            }
-        }
+        public bool IsGyroscopeCalibrated => ((Peripheral.ReadRegister(Registers.CalibrationStatus) >> 4) & 0x03) != 0;
 
         /// <summary>
         /// Get the magnetometer status.
         /// </summary>
-        public bool IsMagnetometerCalibrated
-        {
-            get { return ((Peripheral.ReadRegister(Registers.CalibrationStatus) & 0x03) != 0); }
-        }
+        public bool IsMagnetometerCalibrated => (Peripheral.ReadRegister(Registers.CalibrationStatus) & 0x03) != 0; 
 
         /// <summary>
         /// Is the system fully calibrated?
@@ -222,14 +244,8 @@ namespace Meadow.Foundation.Sensors.Motion
         /// The sensor is fully calibrated if the system, accelerometer, gyroscope and megnetometer
         /// are all calibrated.
         /// </remarks>
-        public bool IsFullyCalibrated
-        {
-            get
-            {
-                return (IsAccelerometerCalibrated && IsGyroscopeCalibrated && IsSystemCalibrated &&
-                        IsMagnetometerCalibrated);
-            }
-        }
+        public bool IsFullyCalibrated => IsAccelerometerCalibrated && IsGyroscopeCalibrated && IsSystemCalibrated &&
+                        IsMagnetometerCalibrated;
 
         /// <summary>
         /// Create a new BNO055 object using the default parameters for the component.
@@ -239,7 +255,6 @@ namespace Meadow.Foundation.Sensors.Motion
         public Bno055(II2cBus i2cBus, Addresses address = Addresses.Default)
             : this(i2cBus, (byte)address)
         {
-
         }
 
         /// <summary>
@@ -254,23 +269,32 @@ namespace Meadow.Foundation.Sensors.Motion
             {
                 throw new Exception("Sensor ID should be 0xa0.");
             }
-
         }
 
+        /// <summary>
+        /// Start updating
+        /// </summary>
+        /// <param name="updateInterval">The time between updates</param>
         public override void StartUpdating(TimeSpan? updateInterval = null)
         {
-            // set up to run
             PowerMode = PowerModes.NORMAL;
             OperatingMode = OperatingModes.NINE_DEGREES_OF_FREEDOM;
             base.StartUpdating(updateInterval);
         }
 
+        /// <summary>
+        /// Stop reading data 
+        /// </summary>
         public override void StopUpdating()
         {
             PowerMode = PowerModes.SUSPENDED;
             base.StopUpdating();
         }
 
+        /// <summary>
+        /// Reads data from the sensor
+        /// </summary>
+        /// <returns>The latest sensor reading</returns>
         protected override Task<
             (Acceleration3D? Acceleration3D, AngularVelocity3D? AngularVelocity3D,
             MagneticField3D? MagneticField3D, Quaternion? QuaternionOrientation,
@@ -351,6 +375,10 @@ namespace Meadow.Foundation.Sensors.Motion
             });
         }
 
+        /// <summary>
+        /// Raise events for subcribers and notify of value changes
+        /// </summary>
+        /// <param name="changeResult">The updated sensor data</param>
         protected override void RaiseEventsAndNotify(IChangeResult<
             (Acceleration3D? Acceleration3D, AngularVelocity3D? AngularVelocity3D,
             MagneticField3D? MagneticField3D, Quaternion? QuaternionOrientation,
@@ -393,9 +421,10 @@ namespace Meadow.Foundation.Sensors.Motion
         }
 
         /// <summary>
-        /// Convert a section of the sensor data into a tuple.
+        /// Convert a section of the sensor data into a tuple
         /// </summary>
-        /// <param name="start">Start of the data in the _sensorReadings member variable.</param>
+        /// <param name="start">Start of the data in the sensorReadings member variable</param>
+        /// <param name="divisor">Divisor</param>
         protected (double X, double Y, double Z) GetReadings(int start, double divisor)
         {
             var x = (short)((ReadBuffer.Span[start + 1] << 8) | ReadBuffer.Span[start]);
@@ -406,11 +435,11 @@ namespace Meadow.Foundation.Sensors.Motion
         }
 
         /// <summary>
-        /// Convert the sensor readings into an orientation in Euler angles.
+        /// Convert the sensor readings into an orientation in Euler angles
         /// </summary>
-        /// <param name="start">First of the sensor readings to convert.</param>
-        /// <param name="divisor">Divisor to apply to the sensor data.</param>
-        /// <returns>EulerAngles object containing the orientation informaiton.</returns>
+        /// <param name="start">First of the sensor readings to convert</param>
+        /// <param name="divisor">Divisor to apply to the sensor data</param>
+        /// <returns>EulerAngles object containing the orientation informaiton</returns>
         protected EulerAngles ConvertReadingToEulerAngles(int start, double divisor)
         {
             var x = (short)((ReadBuffer.Span[start + 1] << 8) | ReadBuffer.Span[start]);
@@ -434,5 +463,14 @@ namespace Meadow.Foundation.Sensors.Motion
 
             Console.WriteLine("== /REGISTERS =======================================================================");
         }
+
+        async Task<AngularVelocity3D> ISamplingSensor<AngularVelocity3D>.Read()
+            => (await Read()).AngularVelocity3D.Value;
+
+        async Task<Acceleration3D> ISamplingSensor<Acceleration3D>.Read()
+            => (await Read()).Acceleration3D.Value;
+
+        async Task<Units.Temperature> ISamplingSensor<Units.Temperature>.Read()
+            => (await Read()).Temperature.Value;
     }
 }

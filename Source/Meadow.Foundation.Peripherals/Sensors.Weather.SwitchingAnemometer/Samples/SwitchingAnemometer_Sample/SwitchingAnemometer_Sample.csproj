@@ -11,7 +11,12 @@
   <ItemGroup>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\..\Meadow.Core\Source\Meadow.F7\Meadow.F7.csproj" />
+    <ProjectReference Include="..\..\..\..\..\..\Meadow.Core\source\Meadow.F7\Meadow.F7.csproj" />
     <ProjectReference Include="..\..\Driver\Sensors.Weather.SwitchingAnemometer.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="meadow.config.yaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

@@ -1,24 +1,61 @@
-using Meadow.Devices;
 using Meadow.Hardware;
 
-namespace Meadow.Foundation.Displays.ePaper
+namespace Meadow.Foundation.Displays
 {
-    //EPD1i54B
-    //EPD1i54C
     /// <summary>
     /// Represents an Il0376F ePaper color display
     /// 200x200, e-Ink three-color display, SPI interface 
     /// </summary>
-    public class Il0376F : EpdColorBase
+    public class Il0376F : EPaperTriColorBase
     {
+        /// <summary>
+        /// Create a new Il0376F object
+        /// </summary>
+        /// <param name="device">Meadow device</param>
+        /// <param name="spiBus">SPI bus connected to display</param>
+        /// <param name="chipSelectPin">Chip select pin</param>
+        /// <param name="dcPin">Data command pin</param>
+        /// <param name="resetPin">Reset pin</param>
+        /// <param name="busyPin">Busy pin</param>
+        /// <param name="width">Width of display in pixels</param>
+        /// <param name="height">Height of display in pixels</param>
         public Il0376F(IMeadowDevice device, ISpiBus spiBus, IPin chipSelectPin, IPin dcPin, IPin resetPin, IPin busyPin,
             int width = 200, int height = 200) :
             base(device, spiBus, chipSelectPin, dcPin, resetPin, busyPin, width, height)
         { }
 
+        /// <summary>
+        /// Create a new Il0376F ePaper display object
+        /// </summary>
+        /// <param name="spiBus">SPI bus connected to display</param>
+        /// <param name="chipSelectPort">Chip select output port</param>
+        /// <param name="dataCommandPort">Data command output port</param>
+        /// <param name="resetPort">Reset output port</param>
+        /// <param name="busyPort">Busy input port</param>
+        /// <param name="width">Width of display in pixels</param>
+        /// <param name="height">Height of display in pixels</param>
+        public Il0376F(ISpiBus spiBus,
+            IDigitalOutputPort chipSelectPort,
+            IDigitalOutputPort dataCommandPort,
+            IDigitalOutputPort resetPort,
+            IDigitalInputPort busyPort,
+            int width, int height) :
+            base(spiBus, chipSelectPort, dataCommandPort, resetPort, busyPort, width, height)
+        { }
+
+        /// <summary>
+        /// Does the display invert data for black pixels
+        /// </summary>
         protected override bool IsBlackInverted => false;
+
+        /// <summary>
+        /// Does the display invert data for color pixels
+        /// </summary>
         protected override bool IsColorInverted => false;
 
+        /// <summary>
+        /// Initalize the display
+        /// </summary>
         protected override void Initialize()
         {
             Reset();
@@ -53,10 +90,13 @@ namespace Meadow.Foundation.Displays.ePaper
             SetLutRed();
         }
 
+        /// <summary>
+        /// Display data from the display controller SRAM
+        /// </summary>
         protected void DisplayFrame()
         {
             byte temp;
-            if (blackImageBuffer != null)
+            if (imageBuffer.BlackBuffer != null)
             {
                 SendCommand(Command.DATA_START_TRANSMISSION_1);
                 DelayMs(2);
@@ -65,7 +105,7 @@ namespace Meadow.Foundation.Displays.ePaper
                     temp = 0x00;
                     for (int bit = 0; bit < 4; bit++)
                     {
-                        if ((blackImageBuffer.Buffer[i] & (0x80 >> bit)) != 0)
+                        if ((imageBuffer.BlackBuffer[i] & (0x80 >> bit)) != 0)
                         {
                             temp |= (byte)(0xC0 >> (bit * 2));
                         }
@@ -74,7 +114,7 @@ namespace Meadow.Foundation.Displays.ePaper
                     temp = 0x00;
                     for (int bit = 4; bit < 8; bit++)
                     {
-                        if ((blackImageBuffer.Buffer[i] & (0x80 >> bit)) != 0)
+                        if ((imageBuffer.BlackBuffer[i] & (0x80 >> bit)) != 0)
                         {
                             temp |= (byte)(0xC0 >> ((bit - 4) * 2));
                         }
@@ -84,18 +124,21 @@ namespace Meadow.Foundation.Displays.ePaper
                 DelayMs(2);
             }
 
-            if (colorImageBuffer != null)
+            if (imageBuffer.ColorBuffer != null)
             {
                 SendCommand(Command.DATA_START_TRANSMISSION_2);
                 DelayMs(2);
-                SendData(colorImageBuffer.Buffer);
+                SendData(imageBuffer.ColorBuffer);
                 DelayMs(2);
             }
             SendCommand(Command.DISPLAY_REFRESH);
             WaitUntilIdle();
         }
 
-        protected void SetLutBlack()
+        /// <summary>
+        /// Set the black lookup table (LUT)
+        /// </summary>
+        void SetLutBlack()
         {
             SendCommand(0x20);         //g vcom
             SendData(lut_vcom0);
@@ -107,7 +150,10 @@ namespace Meadow.Foundation.Displays.ePaper
             SendData(lut_g1);
         }
 
-        protected void SetLutRed()
+        /// <summary>
+        /// Set the red lookup table (LUT)
+        /// </summary>
+        void SetLutRed()
         {
             SendCommand(0x25);
             SendData(lut_vcom1);
@@ -117,6 +163,9 @@ namespace Meadow.Foundation.Displays.ePaper
             SendData(lut_red1);
         }
 
+        /// <summary>
+        /// Set the display to sleep state
+        /// </summary>
         protected void Sleep()
         {
             SendCommand(Command.VCOM_AND_DATA_INTERVAL_SETTING);
@@ -132,11 +181,21 @@ namespace Meadow.Foundation.Displays.ePaper
             SendCommand(Command.POWER_OFF);         //power off
         }
 
+        /// <summary>
+        /// Update the display from the offscreen buffer
+        /// </summary>
         public override void Show()
         {
             DisplayFrame();
         }
 
+        /// <summary>
+        /// Update a region of the display from the offscreen buffer
+        /// </summary>
+        /// <param name="left">Left bounds in pixels</param>
+        /// <param name="top">Top bounds in pixels</param>
+        /// <param name="right">Right bounds in pixels</param>
+        /// <param name="bottom">Bottom bounds in pixels</param>
         public override void Show(int left, int top, int right, int bottom)
         {
             DisplayFrame();
@@ -166,11 +225,12 @@ namespace Meadow.Foundation.Displays.ePaper
             0x0F, 0x83, 0x43, 0x0C, 0x06, 0x0A, 0x04
         };
 
+        /*
         readonly byte[] lut_g2 =
         {
             0x8E, 0x94, 0x01, 0x8A, 0x06, 0x04, 0x8A, 0x4A,
             0x0F, 0x83, 0x43, 0x0C, 0x06, 0x0A, 0x04
-        };
+        };*/
 
         readonly byte[] lut_vcom1 =
         {

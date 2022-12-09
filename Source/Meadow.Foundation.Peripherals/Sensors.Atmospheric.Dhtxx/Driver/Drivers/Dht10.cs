@@ -2,7 +2,7 @@
 using System;
 using System.Threading;
 
-namespace Meadow.Foundation.Sensors.Atmospheric.Dhtxx
+namespace Meadow.Foundation.Sensors.Atmospheric
 {
     /// <summary>
     /// Represents a DHT10 temp / humidity sensor
@@ -25,20 +25,20 @@ namespace Meadow.Foundation.Sensors.Atmospheric.Dhtxx
         public Dht10(II2cBus i2cBus, byte address = (byte)Addresses.Default)
             : base(i2cBus, address)
         {
-            Peripheral.Write(CMD_SOFTRESET);
+            Peripheral?.Write(CMD_SOFTRESET);
             Thread.Sleep(20);
-            Peripheral.Write(CMD_INIT);
+            Peripheral?.Write(CMD_INIT);
         }
 
         internal override void ReadDataI2c()
         {
             WasLastReadSuccessful = true;
 
-            Peripheral.Write(CMD_START);
+            Peripheral?.Write(CMD_START);
             Thread.Sleep(75);
-            // TODO: what's up with this?? it's just thrown away?
-            Peripheral.Read(ReadBuffer.Span);
-            //_readBuffer = Peripheral.ReadBytes(6);
+            
+            //data stored in the read buffer
+            Peripheral?.Read(ReadBuffer.Span);
         }
 
         internal override float GetHumidity()

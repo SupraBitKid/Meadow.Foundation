@@ -1,6 +1,6 @@
 ﻿using Meadow;
 using Meadow.Devices;
-using Meadow.Foundation.Sensors.Atmospheric.Dhtxx;
+using Meadow.Foundation.Sensors.Atmospheric;
 using Meadow.Units;
 using System;
 using System.Threading.Tasks;
@@ -11,7 +11,7 @@ namespace Sensors.Atmospheric.Dht12_Sample
     {
         //<!=SNIP=>
 
-        Dht12 sensor;
+        Dht12? sensor;
 
         public override Task Initialize()
         {
@@ -51,6 +51,8 @@ namespace Sensors.Atmospheric.Dht12_Sample
 
         public override async Task Run()
         {
+            if(sensor == null) { return; }
+
             var conditions = await sensor.Read();
             Console.WriteLine("Initial Readings:");
             Console.WriteLine($"  Temperature: {conditions.Temperature?.Celsius:N2}C");

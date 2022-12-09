@@ -1,23 +1,60 @@
 ﻿using System.Threading;
-using Meadow.Devices;
 using Meadow.Foundation.Graphics;
 using Meadow.Hardware;
 
-namespace Meadow.Foundation.Displays.TftSpi
+namespace Meadow.Foundation.Displays
 {
+    /// <summary>
+    /// Represents a St7796s TFT color display
+    /// </summary>
     public class St7796s : TftSpiBase
     {
-		public override ColorType DefautColorMode => ColorType.Format12bppRgb444;
+        /// <summary>
+        /// The default display color mode
+        /// </summary>
+        public override ColorType DefautColorMode => ColorType.Format12bppRgb444;
 
-		public St7796s(IMeadowDevice device, ISpiBus spiBus, IPin chipSelectPin, IPin dcPin, IPin resetPin,
-            int width = 320, int height = 480, ColorType displayColorMode = ColorType.Format12bppRgb444)
-			: base(device, spiBus, chipSelectPin, dcPin, resetPin, width, height, displayColorMode)
+        /// <summary>
+        /// Create a new St7796s color display object
+        /// </summary>
+        /// <param name="device">Meadow device</param>
+        /// <param name="spiBus">SPI bus connected to display</param>
+        /// <param name="chipSelectPin">Chip select pin</param>
+        /// <param name="dcPin">Data command pin</param>
+        /// <param name="resetPin">Reset pin</param>
+        /// <param name="width">Width of display in pixels</param>
+        /// <param name="height">Height of display in pixels</param>
+        /// <param name="colorMode">The color mode to use for the display buffer</param>
+        public St7796s(IMeadowDevice device, ISpiBus spiBus, IPin chipSelectPin, IPin dcPin, IPin resetPin,
+            int width = 320, int height = 480, ColorType colorMode = ColorType.Format12bppRgb444)
+			: base(device, spiBus, chipSelectPin, dcPin, resetPin, width, height, colorMode)
         {
             Initialize();
 
             SetRotation(Rotation.Normal);
         }
 
+        /// <summary>
+        /// Create a new St7796s color display object
+        /// </summary>
+        /// <param name="spiBus">SPI bus connected to display</param>
+        /// <param name="chipSelectPort">Chip select output port</param>
+        /// <param name="dataCommandPort">Data command output port</param>
+        /// <param name="resetPort">Reset output port</param>
+        /// <param name="width">Width of display in pixels</param>
+        /// <param name="height">Height of display in pixels</param>
+        /// <param name="colorMode">The color mode to use for the display buffer</param>
+        public St7796s(ISpiBus spiBus, IDigitalOutputPort chipSelectPort,
+                IDigitalOutputPort dataCommandPort, IDigitalOutputPort resetPort,
+                int width = 320, int height = 480, ColorType colorMode = ColorType.Format12bppRgb444) :
+            base(spiBus, chipSelectPort, dataCommandPort, resetPort, width, height, colorMode)
+        {
+            Initialize();
+        }
+
+        /// <summary>
+        /// Initalize the display
+        /// </summary>
         protected override void Initialize()
         {
 			Thread.Sleep(120);
@@ -113,14 +150,19 @@ namespace Meadow.Foundation.Displays.TftSpi
 			SendCommand(0xF0); //Command Set control                                 
 			SendData(0x69);    //Disable extension command 2 partII
 
-			//end_tft_write();
 			Thread.Sleep(120);
-			//begin_tft_write();
 
 			SendCommand(0x29); //Display on
 		}
 
-		protected override void SetAddressWindow(int x0, int y0, int x1, int y1)
+        /// <summary>
+        /// Set addrees window for display updates
+        /// </summary>
+        /// <param name="x0">X start in pixels</param>
+        /// <param name="y0">Y start in pixels</param>
+        /// <param name="x1">X end in pixels</param>
+        /// <param name="y1">Y end in pixels</param>
+        protected override void SetAddressWindow(int x0, int y0, int x1, int y1)
 		{
 			SendCommand((byte)LcdCommand.CASET);  // column addr set
 			dataCommandPort.State = Data;
@@ -139,7 +181,11 @@ namespace Meadow.Foundation.Displays.TftSpi
 			SendCommand((byte)LcdCommand.RAMWR);  // write to RAM
 		}
 
-		public void SetRotation(Rotation rotation)
+        /// <summary>
+        /// Set the display rotation
+        /// </summary>
+        /// <param name="rotation">The rotation value</param>
+        public void SetRotation(Rotation rotation)
         {
             SendCommand((byte)Register.MADCTL);
 

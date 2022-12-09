@@ -1,7 +1,7 @@
 ﻿using Meadow;
 using Meadow.Devices;
 using Meadow.Foundation;
-using Meadow.Foundation.Displays.TftSpi;
+using Meadow.Foundation.Displays;
 using Meadow.Foundation.Graphics;
 using Meadow.Foundation.Graphics.Buffers;
 using SimpleJpegDecoder;
@@ -73,7 +73,7 @@ namespace Displays.TftSpi.Ili9341_Jpg_Sample
         byte[] LoadResource(string filename)
         {
             var assembly = Assembly.GetExecutingAssembly();
-            var resourceName = $"Displays.TftSpi.Ili9341_Jpg_Sample.{filename}";
+            var resourceName = $"Ili9341_Jpg_Sample.{filename}";
 
             using (Stream stream = assembly.GetManifestResourceStream(resourceName))
             {
@@ -237,8 +237,6 @@ namespace Displays.TftSpi.Ili9341_Jpg_Sample
 
                 TestDisplay();
             }
-
-            return base.Run();
         }
     }
 }

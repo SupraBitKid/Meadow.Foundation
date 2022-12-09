@@ -1,21 +1,58 @@
-﻿using Meadow.Devices;
-using Meadow.Foundation.Graphics;
+﻿using Meadow.Foundation.Graphics;
 using Meadow.Hardware;
 using System.Threading;
 
-namespace Meadow.Foundation.Displays.TftSpi
+namespace Meadow.Foundation.Displays
 {
+    /// <summary>
+    /// Represents a Ili9163 TFT color display
+    /// </summary>
     public class Ili9163 : TftSpiBase
     {
+        /// <summary>
+        /// The default display color mode
+        /// </summary>
         public override ColorType DefautColorMode => ColorType.Format12bppRgb444;
 
+        /// <summary>
+        /// Create a new Ili9163 color display object
+        /// </summary>
+        /// <param name="device">Meadow device</param>
+        /// <param name="spiBus">SPI bus connected to display</param>
+        /// <param name="chipSelectPin">Chip select pin</param>
+        /// <param name="dcPin">Data command pin</param>
+        /// <param name="resetPin">Reset pin</param>
+        /// <param name="width">Width of display in pixels</param>
+        /// <param name="height">Height of display in pixels</param>
+        /// <param name="colorMode">The color mode to use for the display buffer</param>
         public Ili9163(IMeadowDevice device, ISpiBus spiBus, IPin chipSelectPin, IPin dcPin, IPin resetPin,
-            int width, int height, ColorType displayColorMode = ColorType.Format12bppRgb444) 
-            : base(device, spiBus, chipSelectPin, dcPin, resetPin, width, height, displayColorMode)
+            int width, int height, ColorType colorMode = ColorType.Format12bppRgb444) 
+            : base(device, spiBus, chipSelectPin, dcPin, resetPin, width, height, colorMode)
         {
             Initialize();
         }
-        
+
+        /// <summary>
+        /// Create a new Ili9163 color display object
+        /// </summary>
+        /// <param name="spiBus">SPI bus connected to display</param>
+        /// <param name="chipSelectPort">Chip select output port</param>
+        /// <param name="dataCommandPort">Data command output port</param>
+        /// <param name="resetPort">Reset output port</param>
+        /// <param name="width">Width of display in pixels</param>
+        /// <param name="height">Height of display in pixels</param>
+        /// <param name="colorMode">The color mode to use for the display buffer</param>
+        public Ili9163(ISpiBus spiBus, IDigitalOutputPort chipSelectPort,
+                IDigitalOutputPort dataCommandPort, IDigitalOutputPort resetPort,
+                int width, int height, ColorType colorMode = ColorType.Format12bppRgb444) :
+            base(spiBus, chipSelectPort, dataCommandPort, resetPort, width, height, colorMode)
+        {
+            Initialize();
+        }
+
+        /// <summary>
+        /// Initalize the display
+        /// </summary>
         protected override void Initialize()
         {
             if(resetPort != null)
@@ -151,6 +188,13 @@ namespace Meadow.Foundation.Displays.TftSpi
             dataCommandPort.State = (Data);
         }
 
+        /// <summary>
+        /// Set the address window to update the display
+        /// </summary>
+        /// <param name="x0">X0</param>
+        /// <param name="y0">Y0</param>
+        /// <param name="x1">X1</param>
+        /// <param name="y1">Y1</param>
         protected override void SetAddressWindow(int x0, int y0, int x1, int y1)
         {
             SendCommand((byte)LcdCommand.CASET);  // column addr set
